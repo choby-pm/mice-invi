@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SERVICE_TYPES, SERVICE_STATUS_LABEL, SERVICE_STATUS_BADGE } from "@/lib/service-item-constants";
 import { ParticipantList } from "@/components/console/participant-list";
+import { DelegateList } from "@/components/console/delegate-list";
 
 export default async function DelegationDetailPage({
   params,
@@ -19,7 +21,7 @@ export default async function DelegationDetailPage({
     .single();
   if (!delegation) notFound();
 
-  const [{ data: participants }, { data: serviceItems }] = await Promise.all([
+  const [{ data: participants }, { data: serviceItems }, { data: proxies }] = await Promise.all([
     supabase
       .from("participant")
       .select("id, first_name, last_name, participant_type")
@@ -29,7 +31,20 @@ export default async function DelegationDetailPage({
       .from("service_item")
       .select("id, service_type, status, event_vendor:event_vendor_id(vendor:vendor_id(name))")
       .eq("delegation_id", delegationId),
+    supabase
+      .from("delegation_proxy")
+      .select("id, user_id, status")
+      .eq("delegation_id", delegationId)
+      .order("created_at", { ascending: true }),
   ]);
+
+  const admin = createAdminClient();
+  const delegates = await Promise.all(
+    (proxies ?? []).map(async (p) => {
+      const { data } = await admin.auth.admin.getUserById(p.user_id);
+      return { id: p.id, status: p.status, email: data.user?.email ?? "(알 수 없음)" };
+    }),
+  );
 
   return (
     <div className="space-y-4">
@@ -66,6 +81,15 @@ export default async function DelegationDetailPage({
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">대리인</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DelegateList eventId={eventId} delegationId={delegationId} delegates={delegates} />
         </CardContent>
       </Card>
 

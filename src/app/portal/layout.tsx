@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getMessages } from "@/i18n/get-messages";
 import { setLocale } from "@/server/i18n/set-locale";
 import { Button } from "@/components/ui/button";
-import { mockLogout } from "@/server/auth/mock-login";
+import { portalLogout } from "@/server/modules/iam/portal-auth-actions";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { locale, messages } = await getMessages();
@@ -50,7 +50,7 @@ export default async function PortalLayout({ children }: { children: React.React
           </Link>
         ))}
       </nav>
-      <form action={mockLogout} className="border-t px-4 py-2">
+      <form action={portalLogout} className="border-t px-4 py-2">
         <Button type="submit" variant="ghost" size="sm" className="w-full">
           {messages.common.logout}
         </Button>

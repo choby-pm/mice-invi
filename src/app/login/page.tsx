@@ -11,7 +11,6 @@ import {
 
 const MOCK_ROLE_OPTIONS = [
   { role: "VENDOR_STAFF", label: "협력 업체", desc: "업체 포털" },
-  { role: "PROXY", label: "대리인", desc: "초청자 포털 (비서·수행원)" },
   { role: "PLATFORM_ADMIN", label: "플랫폼 운영자", desc: "내부 도구" },
 ] as const;
 
@@ -34,6 +33,12 @@ export default async function LoginPage({
             <div className="flex flex-col items-start">
               <span className="font-medium">PCO 담당자</span>
               <span className="text-xs text-muted-foreground">행사 운영 콘솔 (실제 로그인)</span>
+            </div>
+          </Button>
+          <Button render={<Link href="/portal-login" />} variant="outline" className="w-full justify-start h-auto py-3">
+            <div className="flex flex-col items-start">
+              <span className="font-medium">대리인</span>
+              <span className="text-xs text-muted-foreground">초청자 포털 (실제 로그인, 이메일 인증번호)</span>
             </div>
           </Button>
           {MOCK_ROLE_OPTIONS.map((opt) => (

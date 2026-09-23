@@ -1,5 +1,12 @@
-import { BlankScreen } from "@/components/shared/blank-screen";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
+import { EventBoard } from "@/components/console/event-board";
 
-export default function ConsoleHomePage() {
-  return <BlankScreen title="행사 목록 (PCO-T01)" note="담당 행사 카드 목록이 들어올 자리입니다. R2에서 구현합니다." />;
+export default async function ConsoleHomePage() {
+  const supabase = await createServerSupabaseClient();
+  const { data: events } = await supabase
+    .from("event")
+    .select("id, name, status, created_at")
+    .order("created_at", { ascending: false });
+
+  return <EventBoard events={events ?? []} />;
 }

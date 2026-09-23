@@ -7,6 +7,7 @@ import {
   Building2,
   Settings,
   LogOut,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/console/delegations", label: "대표단", icon: Users },
   { href: "/console/roster", label: "전체 명단", icon: Table2 },
   { href: "/console/vendors", label: "업체", icon: Building2 },
+  { href: "/console/audit", label: "활동 기록", icon: History },
   { href: "/console/settings", label: "설정", icon: Settings },
 ];
 

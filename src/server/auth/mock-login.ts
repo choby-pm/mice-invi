@@ -5,13 +5,12 @@ import { redirect } from "next/navigation";
 import type { MockRole } from "@/proxy";
 
 const SECTION_BY_ROLE: Record<MockRole, string> = {
-  PCO_MANAGER: "/console",
   VENDOR_STAFF: "/vendor",
   PROXY: "/portal",
   PLATFORM_ADMIN: "/admin",
 };
 
-// R0 임시 로그인. 실제 인증(이메일 OTP·비밀번호, D-SY-10)은 R1에서 Supabase Auth로 교체합니다.
+// vendor/portal/admin 임시 로그인. PCO 콘솔은 실제 로그인으로 교체됐습니다 (/console-login, D-SY-10).
 export async function mockLogin(formData: FormData) {
   const role = formData.get("role") as MockRole;
   const next = formData.get("next") as string | null;

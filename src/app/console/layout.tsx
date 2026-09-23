@@ -23,7 +23,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { mockLogout } from "@/server/auth/mock-login";
+import { logOutPco } from "@/server/modules/iam/auth-actions";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 const NAV = [
   { href: "/console", label: "행사 목록", icon: CalendarRange },
@@ -34,7 +35,10 @@ const NAV = [
   { href: "/console/settings", label: "설정", icon: Settings },
 ];
 
-export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
+export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -60,10 +64,13 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="px-3 py-3">
-          <form action={mockLogout}>
+          <span className="mb-1 truncate text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            {user?.email}
+          </span>
+          <form action={logOutPco}>
             <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2">
               <LogOut className="size-4" />
-              <span className="group-data-[collapsible=icon]:hidden">로그아웃 (PCO 담당자)</span>
+              <span className="group-data-[collapsible=icon]:hidden">로그아웃</span>
             </Button>
           </form>
         </SidebarFooter>

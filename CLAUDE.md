@@ -10,14 +10,15 @@ R0 완료. R1 기반 대부분 완료(직원 초대까지). **R2(초청·정보 
 
 - R1 완료: 테넌트/이벤트/감사로그(`migrations/0001~0002`), PCO 콘솔 실제 로그인(D-SY-10), 행사 CRUD(`/console`), 감사 로그(`/console/audit`), 직원 초대(`/console/team`, `/accept-invite`)
 - R1 남은 것(급하지 않음): 업체 초대, 메일 발송(Resend) 정식 연동
-- R2-a 완료: 의전 등급/지원 정책/대표단/참가자/대리인 스키마+RLS+격리 테스트(`migrations/0003`) — **아직 화면 없음**
-- R2 다음 순서: (1) 대표단·참가자 화면(`/console/delegations`, PCO가 대표단 만들기), (2) 🔒 민감정보(여권·건강) — 위험 영역이라 테스트 먼저, (3) 동의서, (4) 초청 발송 이메일, (5) 대리인 포털 실제 입력 화면
+- R2 완료: 의전등급/지원정책/대표단/참가자/대리인 스키마+RLS(`migrations/0003`), 행사 단위 콘솔 구조(사이드바가 `/console/events/[id]` 진입 시 그 행사 메뉴로 재구성), 대표단 CRUD+상세, 업체 배정(`migrations/0004`), 서비스 항목 현황 5분야 탭(`migrations/0005`, 대표단 생성 시 자동 배정 `migrations/0006`), 🔒 민감정보 — 암호화·열람기록·파기(`migrations/0007~0008`, pgcrypto+SECURITY DEFINER 함수, 직접 SELECT 정책 없음), 참가자 추가 + 민감정보 입력/조회 Sheet
+- 테스트: `npm test` 17개 전부 통과(테넌트 격리 4, 대표단·대리인 격리 7, 민감정보 6)
+- R2 남은 것: 동의서, 초청 발송 이메일, 대리인 포털 실제 입력 화면(현재 포털은 여전히 mock 로그인+빈 화면)
 - vendor/portal/admin 3개 구역은 아직 `mock_role` 쿠키 임시 로그인
-- 알려진 주의점: DB 트리거가 있는 테이블(event, delegation)의 부모 테넌트를 지울 땐 자식부터 지워야 함(감사 로그 FK 문제, `migrations/0003`에서 한 번 고쳤지만 앞으로 새 트리거 만들 때도 같은 패턴 주의)
+- 알려진 주의점: DB 트리거가 있는 테이블(event, delegation)의 부모 테넌트를 지울 땐 자식부터 지워야 함(감사 로그 FK 문제, `migrations/0003`에서 한 번 고침). SECURITY DEFINER 함수에서 권한 체크를 `role not in (...)` 같은 부정형으로 쓰면 NULL(소속 없음)이 조건을 그냥 통과시키는 SQL 함정이 있음 — 항상 `coalesce(role, '')`로 감쌀 것 (`migrations/0008`에서 실제로 이 버그를 테스트가 잡음)
 - 상세 이력: `docs/reviews/REVIEW_LOG.md`, `docs/decisions/DECISION_LOG.md`(D-SY-08~14)
 - 라이브 주소: https://miceinvi.vercel.app · 저장소: github.com/choby-pm/mice-invi (private) · `main` push마다 자동 배포
 
-다음 세션 시작 문장 예시: **"인수인계서 기준으로 다음 작업(대표단 화면) 진행해줘. 끝나면 검수 요청해줘"**
+다음 세션 시작 문장 예시: **"인수인계서 기준으로 다음 작업(동의서 또는 초청 발송) 진행해줘. 끝나면 검수 요청해줘"**
 
 ## 반드시 먼저 읽을 것
 

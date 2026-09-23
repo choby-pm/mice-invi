@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users, AlertTriangle, Table2, Building2, LogOut, ClipboardList } from "lucide-react";
+import { ArrowLeft, Users, AlertTriangle, Table2, Building2, LogOut, ClipboardList, FileCheck2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +41,7 @@ export default async function EventLayout({
   // 이 행사 안에서만 의미 있는 메뉴 (행사를 나가면 사이드바가 (dashboard) 것으로 되돌아갑니다)
   const nav = [
     { href: `/console/events/${id}/delegations`, label: "대표단", icon: Users },
+    { href: `/console/events/${id}/consent`, label: "동의서", icon: FileCheck2 },
     { href: `/console/events/${id}/services`, label: "서비스 현황", icon: ClipboardList },
     { href: `/console/events/${id}/issues`, label: "변경 이슈", icon: AlertTriangle },
     { href: `/console/events/${id}/roster`, label: "전체 명단", icon: Table2 },

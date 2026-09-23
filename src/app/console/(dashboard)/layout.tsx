@@ -24,8 +24,8 @@ import { Button } from "@/components/ui/button";
 import { logOutPco } from "@/server/modules/iam/auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
-// 대표단·변경 이슈·전체 명단·업체는 특정 행사에 속하므로 사이드바가 아니라
-// 행사 홈(/console/events/[id])에 진입한 뒤 탭으로 이동합니다.
+// 행사에 속한 메뉴(대표단·변경 이슈·전체 명단·업체)는 여기 없습니다 —
+// 행사를 선택하면 사이드바 자체가 events/[id]/layout.tsx의 것으로 바뀝니다.
 const NAV = [
   { href: "/console", label: "행사 목록", icon: CalendarRange },
   { href: "/console/audit", label: "활동 기록", icon: History },

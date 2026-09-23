@@ -38,6 +38,7 @@ import {
   SUPPORT_TYPE_LABEL,
   SERVICE_STATUS_LABEL as STATUS_LABEL,
   SERVICE_STATUS_BADGE as STATUS_BADGE,
+  SERVICE_TYPE_COLUMN_LABELS,
 } from "@/lib/service-item-constants";
 
 interface ServiceItemRow {
@@ -112,7 +113,7 @@ function AddServiceItemDialog({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="scheduledAt">예정 시각 (선택)</Label>
+              <Label htmlFor="scheduledAt">{SERVICE_TYPE_COLUMN_LABELS[serviceType].scheduled} (선택)</Label>
               <Input id="scheduledAt" name="scheduledAt" type="datetime-local" />
             </div>
           </div>
@@ -140,9 +141,10 @@ function ServiceTypeTable({
   eventVendors: EventVendorOption[];
 }) {
   const [addOpen, setAddOpen] = useState(false);
+  const columns = SERVICE_TYPE_COLUMN_LABELS[serviceType];
 
   return (
-    <div className="space-y-3 pt-4">
+    <div className="space-y-3">
       <div className="flex justify-end">
         <Button onClick={() => setAddOpen(true)}>
           <Plus className="size-4" />
@@ -158,8 +160,8 @@ function ServiceTypeTable({
               <TableHead>대표단</TableHead>
               <TableHead>상태</TableHead>
               <TableHead>지원 방식</TableHead>
-              <TableHead>담당 업체</TableHead>
-              <TableHead>예정 시각</TableHead>
+              <TableHead>{columns.vendor}</TableHead>
+              <TableHead>{columns.scheduled}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -220,23 +222,28 @@ export function ServiceBoard({
   eventVendors: EventVendorOption[];
 }) {
   return (
-    <Tabs defaultValue="FLIGHT">
-      <TabsList className="sticky top-0 z-10 -mx-6 w-[calc(100%+3rem)] justify-start rounded-none border-b bg-background px-6">
+    <div className="space-y-4">
+      <h1 className="text-lg font-semibold">서비스 현황</h1>
+      <Tabs defaultValue="FLIGHT">
+        <TabsList variant="line" className="h-10 w-full justify-start border-b">
+          {SERVICE_TYPES.map((t) => (
+            <TabsTrigger key={t.value} value={t.value} className="px-3 text-sm">
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
         {SERVICE_TYPES.map((t) => (
-          <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
+          <TabsContent key={t.value} value={t.value} className="pt-4">
+            <ServiceTypeTable
+              eventId={eventId}
+              serviceType={t.value}
+              items={items.filter((i) => i.service_type === t.value)}
+              delegations={delegations}
+              eventVendors={eventVendors}
+            />
+          </TabsContent>
         ))}
-      </TabsList>
-      {SERVICE_TYPES.map((t) => (
-        <TabsContent key={t.value} value={t.value}>
-          <ServiceTypeTable
-            eventId={eventId}
-            serviceType={t.value}
-            items={items.filter((i) => i.service_type === t.value)}
-            delegations={delegations}
-            eventVendors={eventVendors}
-          />
-        </TabsContent>
-      ))}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

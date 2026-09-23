@@ -29,6 +29,15 @@ export const SERVICE_STATUS_LABEL: Record<string, string> = {
   NOT_APPLICABLE: "해당 없음",
 };
 
+// 분야별로 다르게 읽어야 하는 열 이름 (데이터는 같은 service_item이지만 표시만 맞춤)
+export const SERVICE_TYPE_COLUMN_LABELS: Record<string, { scheduled: string; vendor: string }> = {
+  FLIGHT: { scheduled: "희망 입국일시", vendor: "담당 항공사" },
+  LODGING: { scheduled: "체크인 예정", vendor: "담당 호텔" },
+  TRANSFER: { scheduled: "픽업 예정 시각", vendor: "담당 수송업체" },
+  AIRPORT: { scheduled: "의전 예정 시각", vendor: "담당 업체" },
+  DIETARY: { scheduled: "제공 예정 시각", vendor: "담당 업체" },
+};
+
 export const SERVICE_STATUS_BADGE: Record<string, StatusBadgeStatus> = {
   DRAFT: "wait",
   REQUESTED: "wait",

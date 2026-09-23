@@ -53,6 +53,10 @@ describe("테넌트 격리 (RLS)", () => {
 
   afterAll(async () => {
     // beforeAll이 중간에 실패해도(예: 스키마 미적용) 만들어진 부분까지는 정리합니다.
+    // event를 먼저 지우는 이유: 테넌트 삭제에 딸려 연쇄 삭제되면 감사 로그 트리거가
+    // 막 지워지는 테넌트를 참조하려다 실패할 수 있어서입니다 (0003 마이그레이션에서 고침).
+    if (tenantA?.id) await admin.from("event").delete().eq("tenant_id", tenantA.id);
+    if (tenantB?.id) await admin.from("event").delete().eq("tenant_id", tenantB.id);
     if (tenantA?.id) await admin.from("tenant").delete().eq("id", tenantA.id);
     if (tenantB?.id) await admin.from("tenant").delete().eq("id", tenantB.id);
     if (userA?.userId) await admin.auth.admin.deleteUser(userA.userId);

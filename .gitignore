@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 원본 인수인계 zip (docs/, design/에 이미 풀려 있음 — 중복 백업이라 저장소에는 넣지 않음)
 /vip-invite-platform.zip
+
+.vercel
+.env*

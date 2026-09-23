@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>프레임 목업 v0.1 · VIP 초청자 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9e8e4; --paper:#ffffff; --ink:#1c1c1e; --ink2:#55555b; --ink3:#8a8a91;
+  --line:#d3d3d8; --fill:#f3f3f5; --fill2:#e3e3e7; --strong:#2a2a2d; --onstrong:#ffffff;
+  --focus:#1c1c1e;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121214; --paper:#1d1d20; --ink:#ececef; --ink2:#b2b2ba; --ink3:#7b7b84;
+    --line:#38383e; --fill:#26262a; --fill2:#323237; --strong:#e4e4e8; --onstrong:#1d1d20; --focus:#ececef;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121214; --paper:#1d1d20; --ink:#ececef; --ink2:#b2b2ba; --ink3:#7b7b84;
+  --line:#38383e; --fill:#26262a; --fill2:#323237; --strong:#e4e4e8; --onstrong:#1d1d20; --focus:#ececef;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:14px;line-height:1.5}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* ---------- prototype chrome ---------- */
+.proto{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.proto h1{font-size:15px;margin:0;font-weight:700}
+.proto .ver{font-size:12px;color:var(--ink2);margin-left:6px;font-weight:500}
+.picker{display:flex;flex-wrap:wrap;gap:4px}
+.picker button{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:5px 9px;font-size:12.5px;cursor:pointer}
+.picker button[aria-current="true"]{background:var(--strong);color:var(--onstrong);border-color:var(--strong)}
+.device{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:auto}
+.device button{border:0;background:var(--paper);padding:5px 12px;font-size:12.5px;cursor:pointer}
+.device button[aria-pressed="true"]{background:var(--strong);color:var(--onstrong)}
+.stage{display:flex;flex-wrap:wrap;gap:20px;padding:20px 16px 40px;align-items:flex-start;justify-content:center}
+.scroller{flex:0 0 auto;max-width:100%;overflow-x:auto}
+.frame{container-type:inline-size;container-name:app;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.frame.desktop{width:1280px;min-height:800px}
+.frame.mobile{width:390px;height:800px;overflow-y:auto;border-radius:28px;border-width:8px;border-color:var(--strong)}
+.review{width:320px;max-width:100%;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.review h2{font-size:14px;margin:0 0 2px}
+.review .sid{font-size:12px;color:var(--ink2);margin:0 0 12px}
+.review ol{margin:0;padding-left:0;list-style:none;display:grid;gap:10px}
+.review li{display:grid;grid-template-columns:42px 1fr;gap:6px;font-size:13px}
+.review li b{font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:center;height:fit-content;padding:1px 0}
+.legend{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink2);display:grid;gap:6px}
+.legend div{display:flex;gap:8px;align-items:center}
+.note{font-size:12px;color:var(--ink2);margin-top:12px}
+
+/* ---------- wireframe primitives ---------- */
+.screen{display:none}
+.screen.on{display:block}
+.b{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:4px;padding:1px 7px;white-space:nowrap;border:1px solid transparent;line-height:18px}
+.b-urgent{background:var(--strong);color:var(--onstrong)}
+.b-action{border:1.5px solid var(--strong)}
+.b-progress{border:1px dashed var(--ink2);color:var(--ink2)}
+.b-done{background:var(--fill2)}
+.b-wait{border:1px dotted var(--ink3);color:var(--ink3)}
+.b-void{color:var(--ink3);text-decoration:line-through}
+.muted{color:var(--ink2)}
+.small{font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--ink);background:var(--paper);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:var(--strong);color:var(--onstrong);border-color:var(--strong)}
+.btn.ghost{border-color:var(--line);font-weight:500}
+.box{border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 10px}
+.sec-title h3{margin:0;font-size:14.5px}
+.bar{height:8px;background:var(--fill2);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--strong)}
+.strike{text-decoration:line-through;color:var(--ink3)}
+.diff{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.row-link{text-decoration:none;display:block}
+.row-link:hover{background:var(--fill)}
+.anno{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:10px;background:var(--ink);color:var(--paper);font-size:11px;font-weight:700;padding:0 5px;margin-right:6px;vertical-align:1px}
+.show-anno .anno{display:inline-flex}
+.frame:not(.show-anno) .anno{display:none}
+.frame .m-only{display:none !important}
+.mgrid{gap:8px}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;font-size:12px;color:var(--ink2);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.t td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+.t tr.go{cursor:pointer}
+.t tr.go:hover td{background:var(--fill)}
+
+/* ---------- PCO shell ---------- */
+.pco{display:grid;grid-template-columns:212px 1fr;min-height:800px}
+.side{border-right:1px solid var(--line);background:var(--fill);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.side .brand{font-weight:700;font-size:13px;padding:4px 8px 12px}
+.side .ev{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:7px 9px;font-size:12.5px;margin-bottom:10px;display:flex;justify-content:space-between}
+.side a{display:flex;justify-content:space-between;align-items:center;text-decoration:none;padding:7px 9px;border-radius:6px;font-size:13px}
+.side a[aria-current="page"]{background:var(--paper);font-weight:700;box-shadow:inset 3px 0 0 var(--strong)}
+.side a:hover{background:var(--paper)}
+.side .grp{font-size:11.5px;color:var(--ink3);padding:12px 9px 4px}
+.cnt{font-size:11px;font-weight:700;border-radius:9px;padding:0 6px;background:var(--fill2)}
+.cnt.hot{background:var(--strong);color:var(--onstrong)}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .title{font-weight:700;font-size:16px}
+.top .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);border-radius:14px;padding:3px 10px}
+.toggle i{width:26px;height:14px;border-radius:7px;background:var(--strong);position:relative}
+.toggle i::after{content:"";position:absolute;right:2px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--paper)}
+.content{padding:20px 24px 28px;display:grid;gap:20px}
+.tabbar{position:sticky;bottom:0;background:var(--paper);border-top:1px solid var(--line);display:none;grid-template-columns:repeat(5,1fr);padding:6px 4px 8px}
+.tabbar a{text-decoration:none;text-align:center;font-size:11px;color:var(--ink2);display:grid;gap:2px;justify-items:center}
+.tabbar a span.ic{width:22px;height:22px;border:1.5px solid currentColor;border-radius:6px;display:grid;place-items:center;font-size:10px;font-weight:700}
+.tabbar a[aria-current="page"]{color:var(--ink);font-weight:700}
+
+/* home */
+.todo-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cnt-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-decoration:none;display:grid;gap:2px}
+.cnt-card .n{font-size:26px;font-weight:700;line-height:1.1}
+.cnt-card.hot{border:2px solid var(--strong)}
+.urgent-list{display:grid;margin-top:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.urgent-list a{display:grid;grid-template-columns:88px 84px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);text-decoration:none}
+.urgent-list a:last-child{border-bottom:0}
+.urgent-list a:hover{background:var(--fill)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2);margin:8px 0 12px}
+.sched{display:grid;gap:8px}
+.sched div{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;font-size:13px}
+.svc{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.svc div{display:grid;gap:6px;font-size:12.5px}
+
+/* board */
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12.5px;background:var(--paper)}
+.chip.on{border-color:var(--strong);font-weight:600}
+.cards{display:grid;gap:8px}
+.icard{border:1px solid var(--line);border-radius:8px;padding:12px;text-decoration:none;display:grid;gap:6px}
+.icard.hot{border-left:4px solid var(--strong)}
+
+/* issue detail */
+.detail{display:grid;grid-template-columns:1fr 280px;gap:0;border-top:0}
+.tree{display:grid;gap:0}
+.node{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.node .depth{font-size:11px;font-weight:700;border:1px solid var(--ink2);border-radius:4px;padding:0 5px;height:fit-content;margin-top:2px}
+.node .t1{font-weight:600}
+.node .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.ind1{padding-left:28px}.ind2{padding-left:56px}.ind3{padding-left:84px}
+.decide{border:2px solid var(--strong);border-radius:8px;padding:14px;margin-top:8px;display:grid;gap:8px}
+.decide label{display:grid;grid-template-columns:18px 1fr;gap:8px;font-size:13px;align-items:start}
+.activity{border-left:1px solid var(--line);padding:16px 18px;display:grid;gap:10px;align-content:start;font-size:12.5px;background:var(--fill)}
+.activity div{display:grid;grid-template-columns:44px 1fr;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg span{padding:5px 12px;font-size:12.5px}
+.seg span.on{background:var(--strong);color:var(--onstrong)}
+
+/* 360 */
+.dhead{display:grid;gap:8px}
+.dtabs{display:flex;gap:18px;border-bottom:1px solid var(--line);overflow-x:auto}
+.dtabs span{padding:8px 0;font-size:13px;white-space:nowrap}
+.dtabs span.on{font-weight:700;box-shadow:inset 0 -2px 0 var(--strong)}
+.callout{border:1.5px solid var(--strong);border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.cell{display:grid;gap:3px}
+.tag{font-size:11px;color:var(--ink2);border:1px solid var(--line);border-radius:3px;padding:0 5px;width:fit-content}
+details.acc{border:1px solid var(--line);border-radius:8px}
+details.acc summary{padding:10px 12px;display:flex;justify-content:space-between;gap:8px;cursor:pointer;list-style:none}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc .in{padding:0 12px 10px;display:grid;gap:8px}
+details.acc .in div{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+
+/* proxy portal */
+.px{max-width:760px;margin:0 auto;min-height:800px;display:flex;flex-direction:column}
+.pxtop{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.pxtop .ev{font-weight:700}
+.lang{margin-left:auto;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12.5px;background:var(--paper);cursor:pointer}
+.pxbody{padding:20px;display:grid;gap:16px}
+.next{border:2px solid var(--strong);border-radius:10px;padding:16px;display:grid;gap:10px}
+.next .lab{font-size:12px;color:var(--ink2)}
+.next .what{font-size:17px;font-weight:700}
+.req{display:grid;gap:8px}
+.req .top2{display:flex;justify-content:space-between;align-items:baseline}
+.req .big{font-size:22px;font-weight:700}
+.clist{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.clist a{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);text-decoration:none}
+.clist a:last-child{border-bottom:0}
+.clist a:hover{background:var(--fill)}
+.st{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ink2);display:grid;place-items:center;font-size:11px;font-weight:700}
+.st.done{background:var(--strong);color:var(--onstrong);border-color:var(--strong)}
+.st.todo{border:2px solid var(--strong)}
+.st.wait{border-style:dashed}
+.left{font-size:12px;font-weight:700;border:1.5px solid var(--strong);border-radius:10px;padding:0 8px}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px}
+.pcard .who{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.flight{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;background:var(--fill)}
+.flight .ap{font-size:20px;font-weight:700}
+.field{display:grid;gap:4px}
+.field label{font-size:12.5px;font-weight:600}
+.field label .rq{margin-left:2px}
+.inp{border:1px solid var(--line);border-radius:6px;height:36px;background:var(--paper);display:flex;align-items:center;padding:0 10px;color:var(--ink3);font-size:13px}
+.inp.err{border:2px solid var(--strong)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info{font-size:12.5px;color:var(--ink2);border-left:3px solid var(--line);padding-left:10px}
+
+/* vendor */
+.vd{min-height:800px;display:flex;flex-direction:column}
+.vdtop{display:flex;align-items:center;gap:16px;padding:12px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.vdtop nav{display:flex;gap:14px;font-size:13px}
+.vdtop nav a{text-decoration:none;padding:4px 0}
+.vdtop nav a.on{font-weight:700;box-shadow:inset 0 -2px 0 var(--strong)}
+.vdbody{padding:20px 24px;display:grid;gap:14px}
+.stop{border:3px solid var(--strong);border-radius:8px;padding:12px 14px;display:grid;gap:6px}
+.form3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ---------- mobile (container) ---------- */
+@container app (max-width: 640px){
+  .d-only{display:none !important}
+  .frame .m-only{display:block !important}
+  .frame .cards.m-only,.frame .mgrid.m-only{display:grid !important}
+  .pco{grid-template-columns:1fr;min-height:784px;grid-template-rows:1fr auto}
+  .tabbar{display:grid}
+  .top{padding:10px 16px}
+  .top .title{font-size:15px}
+  .content{padding:14px 16px 20px;gap:16px}
+  .todo-counts{grid-template-columns:1fr 1fr}
+  .urgent-list a{grid-template-columns:1fr auto;gap:4px 8px}
+  .urgent-list a .col-id{display:none}
+  .urgent-list a .col-txt{grid-column:1 / -1}
+  .two{grid-template-columns:1fr}
+  .svc{grid-template-columns:1fr 1fr}
+  .detail{grid-template-columns:1fr}
+  .ind1,.ind2,.ind3{padding-left:14px}
+  .px{min-height:784px}
+  .pxbody{padding:16px}
+  .grid2{grid-template-columns:1fr}
+  .vdbody{padding:14px 16px}
+  .vdtop{padding:10px 16px}
+  .form3{grid-template-columns:1fr}
+  .flight .ap{font-size:17px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+
+<header class="proto">
+  <h1>프레임 목업<span class="ver">v0.1 · 흑백 와이어프레임</span></h1>
+  <div class="picker" role="tablist" aria-label="화면 선택" id="picker"></div>
+  <div class="device" role="group" aria-label="기기 전환">
+    <button type="button" data-dev="desktop" aria-pressed="true">데스크톱</button>
+    <button type="button" data-dev="mobile" aria-pressed="false">모바일</button>
+  </div>
+  <label class="small" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="annoToggle" checked> 검수 번호 표시</label>
+</header>
+
+<main class="stage">
+  <div class="scroller">
+    <div class="frame desktop show-anno" id="frame">
+
+<!-- ================= PCO-E01 행사 홈 ================= -->
+<section class="screen" id="pco-e01" data-title="행사 홈" data-code="PCO-E01">
+ <div class="pco" data-active="home">
+  <div class="main">
+   <div class="top">
+     <span class="title">홈</span><span class="b b-action">D-12</span>
+     <div class="sp">
+       <span class="toggle"><span class="anno">1</span>내 담당만 <i></i></span>
+       <span class="btn ghost d-only">알림 3</span>
+     </div>
+   </div>
+   <div class="content">
+     <section>
+       <div class="sec-title"><h3><span class="anno">2</span>지금 처리할 일</h3></div>
+       <div class="todo-counts">
+         <a class="cnt-card hot" href="#pco-e02"><span class="small">긴급 이슈</span><span class="n">2</span></a>
+         <a class="cnt-card" href="#pco-e03"><span class="small">내 판단 필요</span><span class="n">3</span></a>
+         <a class="cnt-card" href="#pco-e04"><span class="small">초청 미응답</span><span class="n">7</span></a>
+         <a class="cnt-card" href="#pco-e01"><span class="small">주최측 요청</span><span class="n">1</span></a>
+       </div>
+       <div class="urgent-list">
+         <a href="#pco-e03"><span class="b b-urgent">긴급 · 3시간</span><span class="col-id small muted">CHG-042</span><span class="col-txt">베트남 장관 대표단 · 도착 <span class="strike">14:00</span> → 19:30 · 픽업 재배차 미확인</span><span class="small muted">수송 업체</span></a>
+         <a href="#pco-e03"><span class="b b-urgent">긴급 · 20시간</span><span class="col-id small muted">CHG-045</span><span class="col-txt">케냐 대통령 대표단 · 공항 변경 ICN → GMP · 공항 의전 재배정</span><span class="small muted">의전 업체</span></a>
+         <a href="#pco-e03"><span class="b b-action">내 판단</span><span class="col-id small muted">CHG-039</span><span class="col-txt">가나 장관 대표단 · 환영 만찬 참석 가능 여부</span><span class="small muted">나</span></a>
+       </div>
+       <p class="small muted" style="margin:8px 0 0"><a href="#pco-e02">변경 이슈 전체 보기</a></p>
+     </section>
+
+     <div class="two">
+       <section class="box" style="padding:16px">
+         <div class="sec-title"><h3><span class="anno">3</span>초청 진행</h3><span class="small muted">확정 32 / 48</span></div>
+         <div class="bar"><i style="width:66%"></i></div>
+         <div class="kv"><span>입력 중 8</span><span>열람 4</span><span>미열람 3</span><span><b>반송 1</b></span></div>
+         <span class="btn">미응답 7개 대표단 독촉</span>
+       </section>
+       <section class="box" style="padding:16px">
+         <div class="sec-title"><h3><span class="anno">4</span>다가오는 일정 · 72시간</h3></div>
+         <div class="sched">
+           <div><span class="small muted">내일 14:00</span><span>입국 3개 대표단</span><span class="b b-done">배차 완료</span></div>
+           <div><span class="small muted">내일 18:00</span><span>환영 만찬</span><span class="b b-wait">가안</span></div>
+           <div><span class="small muted">모레 10:00</span><span>본회의 1세션</span><span class="b b-done">확정</span></div>
+         </div>
+       </section>
+     </div>
+
+     <section class="box" style="padding:16px">
+       <div class="sec-title"><h3><span class="anno">5</span>서비스 진행</h3><a class="small muted" href="#pco-e01">서비스 현황</a></div>
+       <div class="svc">
+         <div><span>항공 41 / 48</span><div class="bar"><i style="width:85%"></i></div></div>
+         <div><span>숙박 44 / 48</span><div class="bar"><i style="width:92%"></i></div></div>
+         <div><span>수송 38 / 52</span><div class="bar"><i style="width:73%"></i></div></div>
+         <div><span>공항 의전 40 / 48</span><div class="bar"><i style="width:83%"></i></div></div>
+         <div><span>식이 46 / 48</span><div class="bar"><i style="width:96%"></i></div></div>
+       </div>
+     </section>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= PCO-E02 변경 이슈 보드 ================= -->
+<section class="screen" id="pco-e02" data-title="변경 이슈 보드" data-code="PCO-E02">
+ <div class="pco" data-active="issues">
+  <div class="main">
+   <div class="top"><span class="title">변경 이슈</span><span class="small muted">미종결 7 · 긴급 2 · 주의 3</span></div>
+   <div class="content">
+     <div class="filters"><span class="anno">1</span>
+       <span class="chip on">미종결</span><span class="chip">서비스: 전체</span><span class="chip">업체: 전체</span><span class="chip on">내 담당만</span>
+       <span class="chip d-only">대표단 검색</span>
+       <span class="small muted" style="margin-left:auto">정렬: 급한 순</span>
+     </div>
+     <div class="box d-only" style="overflow:hidden">
+       <table class="t">
+         <thead><tr><th><span class="anno">2</span>긴급도</th><th>이슈</th><th>대표단</th><th>변경 내용</th><th>진행</th><th><span class="anno">3</span>막힌 곳</th></tr></thead>
+         <tbody>
+           <tr class="go" data-go="pco-e03"><td><span class="b b-urgent">3시간</span></td><td>CHG-042</td><td>베트남 장관</td><td>도착 <span class="strike">14:00</span> → 19:30</td><td>3 / 6</td><td>수송 · B운수</td></tr>
+           <tr class="go" data-go="pco-e03"><td><span class="b b-urgent">20시간</span></td><td>CHG-045</td><td>케냐 대통령</td><td>공항 <span class="strike">ICN</span> → GMP</td><td>1 / 4</td><td>공항 의전 · D의전</td></tr>
+           <tr class="go" data-go="pco-e03"><td><span class="b b-action">주의</span></td><td>CHG-039</td><td>가나 장관</td><td>입국일 <span class="strike">10.13</span> → 10.14</td><td>4 / 5</td><td><b>내 판단</b></td></tr>
+           <tr class="go" data-go="pco-e03"><td><span class="b b-action">주의</span></td><td>CHG-040</td><td>세네갈 총리</td><td>동반자 +1명</td><td>2 / 5</td><td>숙박 · E호텔</td></tr>
+           <tr class="go" data-go="pco-e03"><td><span class="b b-action">주의</span></td><td>CHG-044</td><td>르완다 장관</td><td>본회의 불참</td><td>0 / 2</td><td>식음 · C케이터링 <span class="b b-wait">미착수</span></td></tr>
+           <tr class="go" data-go="pco-e03"><td><span class="small muted">일반</span></td><td>CHG-041</td><td>에티오피아 차관</td><td>식이 일반 → 할랄</td><td>0 / 1</td><td>식음 · C케이터링</td></tr>
+         </tbody>
+       </table>
+     </div>
+     <div class="cards m-only">
+       <a class="icard hot" href="#pco-e03"><div style="display:flex;justify-content:space-between"><span class="b b-urgent">3시간</span><span class="small muted">3 / 6</span></div><b>베트남 장관</b><span class="small">도착 <span class="strike">14:00</span> → 19:30</span><span class="small muted">막힌 곳: 수송 · B운수</span></a>
+       <a class="icard hot" href="#pco-e03"><div style="display:flex;justify-content:space-between"><span class="b b-urgent">20시간</span><span class="small muted">1 / 4</span></div><b>케냐 대통령</b><span class="small">공항 <span class="strike">ICN</span> → GMP</span><span class="small muted">막힌 곳: 공항 의전</span></a>
+       <a class="icard" href="#pco-e03"><div style="display:flex;justify-content:space-between"><span class="b b-action">주의</span><span class="small muted">4 / 5</span></div><b>가나 장관</b><span class="small">입국일 변경</span><span class="small"><b>막힌 곳: 내 판단</b></span></a>
+       <a class="icard" href="#pco-e03"><div style="display:flex;justify-content:space-between"><span class="b b-action">주의</span><span class="small muted">2 / 5</span></div><b>세네갈 총리</b><span class="small">동반자 +1명</span><span class="small muted">막힌 곳: 숙박</span></a>
+     </div>
+     <p class="small muted"><span class="anno">4</span>미종결이 0건이 되면 이 자리에 "모든 변경이 반영되었습니다"와 최근 종결 이슈가 표시됩니다.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= PCO-E03 변경 이슈 상세 ================= -->
+<section class="screen" id="pco-e03" data-title="변경 이슈 상세" data-code="PCO-E03">
+ <div class="pco" data-active="issues">
+  <div class="main">
+   <div class="top"><a class="small" href="#pco-e02">← 변경 이슈</a><span class="title">CHG-042</span><span class="b b-progress">진행중 3 / 6</span></div>
+   <div class="content" style="padding-bottom:0">
+     <div class="box" style="padding:14px 16px;display:grid;gap:6px">
+       <b>베트남 산업통상부 장관 대표단</b>
+       <div class="diff"><span class="anno">1</span><span class="small muted">입국 도착</span><span class="strike">ICN 14:00 KST</span><span>→</span><b>GMP 19:30 KST</b></div>
+       <span class="small muted">시작: 대리인 요청(도착지 변경) · 오늘 09:12</span>
+     </div>
+     <div class="m-only"><div class="seg"><span class="on">조정 현황</span><span>활동 기록</span></div></div>
+   </div>
+   <div class="detail">
+     <div style="padding:8px 24px 24px">
+       <div class="sec-title" style="margin-top:8px"><h3><span class="anno">2</span>연쇄 조정 현황</h3></div>
+       <div class="tree">
+         <div class="node"><span class="depth">1차</span><div><div class="t1">항공 재예약 · A여행사</div><span class="b b-done">완료 09:10</span> <span class="small muted">VN416 GMP 19:30 확정</span></div></div>
+         <div class="node ind1"><span class="depth">2차</span><div><div class="t1">수송 픽업 재배차 · B운수</div><span class="b b-urgent">조치 필요 · 3시간 남음</span> <span class="small muted">재알림 1회</span>
+           <div class="acts"><span class="btn ghost">재알림</span><span class="btn ghost">연락처</span><span class="btn ghost">해당 없음</span></div></div></div>
+         <div class="node ind2"><span class="depth">3차</span><div><div class="t1"><span class="anno">3</span>환영 만찬 참석 가능 여부 · 내 판단</div><span class="b b-action">판단 필요</span>
+           <div class="decide">
+             <div class="small">만찬 18:00 (롯데호텔) · 새 도착 19:30 · 이동 약 40분<br><b>도착이 만찬 시작보다 1시간 30분 늦습니다</b></div>
+             <label><input type="radio" name="d1"> <span>참석 가능 <span class="small muted">— 다음 연쇄 없음</span></span></label>
+             <label><input type="radio" name="d1" checked> <span>불참 <span class="small muted">— 좌석·식수 조정 항목 생성 (C케이터링)</span></span></label>
+             <label><input type="radio" name="d1"> <span>늦게 참석 <span class="small muted">— 좌석 유지, 입장 동선 메모</span></span></label>
+             <div><span class="btn primary">결정 완료</span></div>
+           </div></div></div>
+         <div class="node ind3"><span class="depth">4차</span><div><div class="t1">만찬 좌석·식수 · C케이터링</div><span class="b b-wait">대기 · 3차 결정 후</span></div></div>
+         <div class="node ind1"><span class="depth">2차</span><div><div class="t1">공항 의전 재배정 · D의전</div><span class="b b-progress">처리중 · 김OO 확인 10:02</span></div></div>
+         <div class="node ind1"><span class="depth">2차</span><div><div class="t1">호텔 체크인 시각 · E호텔</div><span class="b b-done">완료 10:05</span> <span class="small muted">체크인 <span class="strike">15:00</span> → 20:30</span></div></div>
+       </div>
+       <div class="acts" style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><span class="anno">4</span><span class="btn ghost">조정 항목 추가</span><span class="btn ghost">정정 요청</span><span class="btn ghost">강제 종결</span></div>
+     </div>
+     <aside class="activity d-only">
+       <b>활동 기록</b>
+       <div><span class="muted">09:10</span><span>A여행사 항공 확정</span></div>
+       <div><span class="muted">09:12</span><span>이슈 생성, 5개 항목 전개</span></div>
+       <div><span class="muted">09:15</span><span>B운수·D의전·E호텔 알림 발송</span></div>
+       <div><span class="muted">09:40</span><span>E호텔 확인</span></div>
+       <div><span class="muted">10:02</span><span>D의전 확인</span></div>
+       <div><span class="muted">10:05</span><span>E호텔 완료</span></div>
+       <div><span class="muted">11:15</span><span>B운수 재알림 (미확인 2시간)</span></div>
+     </aside>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= PCO-E05 대표단 360 ================= -->
+<section class="screen" id="pco-e05" data-title="대표단 360" data-code="PCO-E05">
+ <div class="pco" data-active="delegations">
+  <div class="main">
+   <div class="top"><a class="small" href="#pco-e04">← 대표단</a><span class="title">베트남 산업통상부 장관 대표단</span></div>
+   <div class="content">
+     <div class="dhead">
+       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="anno">1</span><span class="b b-done">확정</span><span class="tag">의전 B · 장관급</span><span class="small muted">완결률 92% · 대리인 2 · 담당 김초청</span><a href="#pco-e03" class="b b-progress">진행중 이슈 1</a></div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn primary">일정표 발행</span><span class="btn ghost">대리인에게 메시지</span></div>
+     </div>
+     <div class="callout"><span><span class="anno">2</span><b>필수 3개 누락</b> <span class="small muted">경호원 여권 정보 2 · 자비 항공편 1 (입국 D-9)</span></span><span class="btn ghost">누락 항목 독촉</span></div>
+     <div class="dtabs"><span class="on">개요</span><span>참가자 4</span><span>서비스</span><span>일정 5</span><span>변경 이슈 1</span><span>동의·문서</span><span>이력</span></div>
+     <div class="box d-only" style="overflow:hidden">
+       <table class="t">
+         <thead><tr><th><span class="anno">3</span>참가자</th><th>항공</th><th>숙박</th><th>수송</th><th>공항 의전</th><th>식이</th></tr></thead>
+         <tbody>
+           <tr><td><b>H.E. Nguyen</b><br><span class="small muted">VIP</span></td>
+             <td><div class="cell"><span class="b b-done">확정</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-done">확정</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-action">변경 중</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-progress">처리중</span><span class="tag">지원</span></div></td>
+             <td><span class="b b-done">할랄</span></td></tr>
+           <tr><td><b>Mrs. Nguyen</b><br><span class="small muted">동반자</span></td>
+             <td><div class="cell"><span class="b b-done">확정</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-done">VIP 동숙</span></div></td>
+             <td><div class="cell"><span class="b b-action">변경 중</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-progress">처리중</span><span class="tag">지원</span></div></td>
+             <td><span class="b b-done">일반</span></td></tr>
+           <tr><td><b>Mr. Tran</b><br><span class="small muted">수행 · 보좌관</span></td>
+             <td><div class="cell"><span class="b b-done">입력 완료</span><span class="tag">자비</span></div></td>
+             <td><div class="cell"><span class="b b-done">확정</span><span class="tag">지원</span></div></td>
+             <td><div class="cell"><span class="b b-action">변경 중</span><span class="tag">지원</span></div></td>
+             <td><span class="b b-wait">미제공</span></td>
+             <td><span class="b b-done">일반</span></td></tr>
+           <tr><td><b>Mr. Le</b><br><span class="small muted">수행 · 경호</span></td>
+             <td><div class="cell"><span class="b b-urgent">미입력</span><span class="tag">자비</span></div></td>
+             <td><div class="cell"><span class="b b-done">확정</span><span class="tag">지원</span></div></td>
+             <td><span class="b b-wait">대기</span></td>
+             <td><span class="b b-wait">미제공</span></td>
+             <td><span class="b b-wait">미입력</span></td></tr>
+         </tbody>
+       </table>
+     </div>
+     <div class="m-only mgrid">
+       <details class="acc" open><summary><span><b>H.E. Nguyen</b> <span class="small muted">VIP</span></span><span class="b b-action">변경 중 1</span></summary>
+         <div class="in"><div><span>항공 <span class="tag">지원</span></span><span class="b b-done">확정</span></div><div><span>숙박 <span class="tag">지원</span></span><span class="b b-done">확정</span></div><div><span>수송</span><span class="b b-action">변경 중</span></div><div><span>공항 의전</span><span class="b b-progress">처리중</span></div></div></details>
+       <details class="acc"><summary><span><b>Mrs. Nguyen</b> <span class="small muted">동반자</span></span><span class="b b-action">변경 중 1</span></summary><div class="in"><div><span>항공</span><span class="b b-done">확정</span></div></div></details>
+       <details class="acc"><summary><span><b>Mr. Tran</b> <span class="small muted">보좌관</span></span><span class="b b-action">변경 중 1</span></summary><div class="in"><div><span>항공 <span class="tag">자비</span></span><span class="b b-done">입력 완료</span></div></div></details>
+       <details class="acc"><summary><span><b>Mr. Le</b> <span class="small muted">경호</span></span><span class="b b-urgent">누락 3</span></summary><div class="in"><div><span>항공 <span class="tag">자비</span></span><span class="b b-urgent">미입력</span></div></div></details>
+     </div>
+     <p class="small muted" style="margin:0"><span class="anno">4</span>칸을 누르면 해당 서비스 상세(요청 ↔ 확정 비교, 이력)가 오른쪽 패널로 열립니다. 모바일은 전체 화면.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= PX-03 대리인 홈 ================= -->
+<section class="screen" id="px-03" data-title="대리인 홈" data-code="PX-03">
+ <div class="px">
+  <div class="pxtop"><span class="ev" data-ko="한-아프리카 정상회의 2026">Korea-Africa Summit 2026</span><button class="lang" type="button" data-langtoggle>🌐 <span data-ko="한국어">English</span> ▾</button><span class="anno">1</span></div>
+  <div class="pxbody">
+    <div>
+      <div style="font-size:17px;font-weight:700" data-ko="응우옌 장관 대표단">Delegation of H.E. Minister Nguyen</div>
+      <div class="small muted"><span data-ko="마감: 2026년 10월 15일 · 9일 남음">Deadline: 15 Oct 2026 · 9 days left</span> · <a href="#px-03" data-ko="대표단 전환">Switch delegation</a></div>
+    </div>
+    <div class="next"><span class="lab"><span class="anno">2</span><span data-ko="다음 할 일">Next step</span></span><span class="what" data-ko="경호원 1명의 여권 정보 입력">Add passport details for 1 person</span><div><span class="btn primary" data-ko="계속하기">Continue</span></div></div>
+    <div class="req box" style="padding:14px 16px">
+      <div class="top2"><span><span class="anno">3</span><b data-ko="필수 항목">Required items</b></span><span class="small muted" data-ko="7개 남음">7 left</span></div>
+      <div class="big">38 / 45</div>
+      <div class="bar"><i style="width:84%"></i></div>
+      <a class="small" href="#px-03" data-ko="다음 빈 항목으로">Go to next empty item</a>
+    </div>
+    <div>
+      <div class="sec-title"><h3><span class="anno">4</span><span data-ko="체크리스트">Checklist</span></h3><span class="small muted" data-ko="9개 중 6개 완료">6 of 9 done</span></div>
+      <div class="clist">
+        <a href="#px-03"><span class="st done">✓</span><span data-ko="개인정보 동의">Consent</span><span></span></a>
+        <a href="#px-03"><span class="st done">✓</span><span data-ko="참석 회신 · 참석">Attendance · Attending</span><span></span></a>
+        <a href="#px-03"><span class="st todo">!</span><span><span data-ko="참가자 (4명)">Participants (4)</span><br><span class="small muted" data-ko="Mr. Le 여권 정보">Passport details for Mr. Le</span></span><span class="left" data-ko="2개 남음">2 left</span></a>
+        <a href="#px-08"><span class="st todo">!</span><span><span data-ko="항공">Flights</span><br><span class="small muted" data-ko="확정 2 · 요청 중 1 · 자비 항공편 입력 필요 1">2 confirmed · 1 in progress · 1 self-paid to enter</span></span><span class="left" data-ko="1개 남음">1 left</span></a>
+        <a href="#px-03"><span class="st done">✓</span><span data-ko="숙박 · 확정">Hotel · Confirmed</span><span></span></a>
+        <a href="#px-03"><span class="st wait">·</span><span><span data-ko="일정">Programs</span><br><span class="small muted" data-ko="초청 2건 회신 필요">2 invitations to answer</span></span><span class="left" data-ko="2개 남음">2 left</span></a>
+        <a href="#px-03"><span class="st todo">!</span><span data-ko="식이·특별 요청">Dietary &amp; special needs</span><span class="left" data-ko="2개 남음">2 left</span></a>
+      </div>
+    </div>
+    <div class="box" style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><b data-ko="내 일정표">Your itinerary</b><br><span class="small muted" data-ko="오늘 업데이트됨">Updated today</span></span><span class="btn ghost" data-ko="보기">View</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= PX-08 대리인 항공 ================= -->
+<section class="screen" id="px-08" data-title="대리인 항공" data-code="PX-08">
+ <div class="px">
+  <div class="pxtop"><a class="small" href="#px-03" data-ko="← 체크리스트">← Checklist</a><span class="ev" data-ko="항공">Flights</span><button class="lang" type="button" data-langtoggle>🌐 <span data-ko="한국어">English</span> ▾</button></div>
+  <div class="pxbody">
+    <p class="info"><span class="anno">1</span><span data-ko="지원 항공은 출발·도착 도시만 알려주시면 항공권을 준비해 드립니다. 자비 항공은 직접 예약 후 공항 픽업을 위해 항공편을 입력해 주세요.">Supported flights: tell us your cities and dates, and we'll book the tickets. Self-paid flights: book them yourself, then enter the flight so we can arrange airport pickup.</span></p>
+
+    <div class="pcard">
+      <div class="who"><b>H.E. Nguyen</b><span><span class="tag" data-ko="지원">Supported</span> <span class="b b-done" data-ko="확정">Confirmed</span></span></div>
+      <div class="flight"><div><div class="ap">HAN</div><div class="small muted">14 Oct 2026 · 11:20 ICT</div></div><div class="small muted">VN416</div><div style="text-align:right"><div class="ap">GMP</div><div class="small muted">19:30 KST</div></div></div>
+      <div class="small muted"><span data-ko="예약번호">Booking ref.</span> X7K2LM · <span data-ko="귀국">Return</span> 18 Oct · ICN → SGN</div>
+      <div><span class="anno">2</span><span class="btn ghost" data-ko="변경 요청">Request a change</span></div>
+    </div>
+
+    <div class="pcard">
+      <div class="who"><b>Mrs. Nguyen</b><span><span class="tag" data-ko="지원">Supported</span> <span class="b b-progress" data-ko="준비 중">In progress</span></span></div>
+      <p class="small" style="margin:0" data-ko="항공권을 준비하고 있습니다. 확정되면 알려드립니다.">We're arranging this ticket. We'll let you know when it's confirmed.</p>
+      <div class="small muted"><span data-ko="요청 내용">Your request</span>: Hanoi → Seoul (ICN) · 14 Oct / Seoul → Ho Chi Minh City · 18 Oct</div>
+      <div><span class="btn ghost" data-ko="요청 수정">Edit request</span></div>
+    </div>
+
+    <div class="pcard">
+      <div class="who"><b>Mr. Le</b><span><span class="anno">3</span><span class="tag" data-ko="자비">Self-paid</span> <span class="b b-urgent" data-ko="필수 입력">Required</span></span></div>
+      <p class="small muted" style="margin:0" data-ko="이 참가자의 항공권은 지원되지 않습니다. 동반자 1인까지 지원됩니다.">Flights for this person are not covered. The event covers flights for up to 1 companion.</p>
+      <div class="grid2">
+        <div class="field"><label><span data-ko="편명">Flight number</span> <span class="rq">*</span></label><div class="inp err">e.g. VN416</div></div>
+        <div class="field"><label><span data-ko="도착 공항">Arrival airport</span> <span class="rq">*</span></label><div class="inp">Search airport</div></div>
+        <div class="field"><label><span data-ko="도착 일시 (현지)">Arrival date &amp; time (local)</span> <span class="rq">*</span></label><div class="inp">14 Oct 2026 · 19:30 KST</div></div>
+        <div class="field"><label><span data-ko="귀국 편명">Return flight</span> <span class="rq">*</span></label><div class="inp">e.g. VN417</div></div>
+      </div>
+      <div class="small muted" data-ko="저장됨 · 방금">Saved · just now</div>
+    </div>
+    <p class="small muted" style="margin:0"><span class="anno">4</span><span data-ko="Mr. Tran(자비, 입력 완료) 카드는 접혀 있습니다.">Mr. Tran (self-paid, entered) is collapsed.</span></p>
+  </div>
+ </div>
+</section>
+
+<!-- ================= VD-03 업체 통합 할 일 ================= -->
+<section class="screen" id="vd-03" data-title="업체 통합 할 일" data-code="VD-03">
+ <div class="vd">
+  <div class="vdtop"><b>B운수</b><nav><a class="on" href="#vd-03">통합 할 일 <span class="cnt hot">5</span></a><a href="#vd-03">내 프로젝트</a></nav><span class="small muted" style="margin-left:auto">프로젝트: 전체 ▾</span></div>
+  <div class="vdbody">
+    <div class="small muted"><span class="anno">1</span>조치 필요 5 · 처리중 3 · 예정 4</div>
+    <div class="box d-only" style="overflow:hidden">
+      <table class="t">
+        <thead><tr><th>기한</th><th><span class="anno">2</span>프로젝트 (PCO)</th><th>대표단</th><th>할 일</th><th></th></tr></thead>
+        <tbody>
+          <tr class="go" data-go="vd-07"><td><span class="b b-urgent">3시간</span></td><td>한-아프리카 정상회의<br><span class="small muted">○○PCO</span></td><td>베트남 장관</td><td>픽업 재배차 · 도착 <span class="strike">14:00</span> → 19:30</td><td><span class="btn">확인</span></td></tr>
+          <tr class="go" data-go="vd-07"><td><span class="b b-urgent">⛔</span></td><td>한-아프리카 정상회의<br><span class="small muted">○○PCO</span></td><td>가나 장관</td><td><b>작업 중지</b> · 요청 취소됨</td><td><span class="btn">확인</span></td></tr>
+          <tr class="go" data-go="vd-07"><td><span class="b b-action">1일</span></td><td>서울 바이오포럼<br><span class="small muted">△△컨벤션</span></td><td>독일 장관</td><td>신규 공항 픽업</td><td><span class="btn">확인</span></td></tr>
+          <tr class="go" data-go="vd-07"><td><span class="b b-action">2일</span></td><td>한-아프리카 정상회의<br><span class="small muted">○○PCO</span></td><td>세네갈 총리</td><td>탑승 인원 2 → 3</td><td><span class="btn">확인</span></td></tr>
+          <tr><td><span class="b b-wait">예정</span></td><td>한-아프리카 정상회의<br><span class="small muted">○○PCO</span></td><td>가나 장관</td><td class="muted"><span class="anno">3</span>만찬 후 이동 · 상위 결정 대기</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cards m-only">
+      <a class="icard hot" href="#vd-07"><div style="display:flex;justify-content:space-between"><span class="b b-urgent">3시간</span><span class="small muted">○○PCO</span></div><b>픽업 재배차 · 베트남 장관</b><span class="small">도착 <span class="strike">14:00</span> → 19:30</span></a>
+      <a class="icard hot" href="#vd-07"><div style="display:flex;justify-content:space-between"><span class="b b-urgent">⛔ 작업 중지</span><span class="small muted">○○PCO</span></div><b>가나 장관 · 요청 취소됨</b></a>
+      <a class="icard" href="#vd-07"><div style="display:flex;justify-content:space-between"><span class="b b-action">1일</span><span class="small muted">△△컨벤션</span></div><b>신규 공항 픽업 · 독일 장관</b></a>
+      <div class="icard" style="color:var(--ink3)"><span class="b b-wait">예정</span><b>만찬 후 이동 · 가나 장관</b></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ================= VD-07 조정 항목 처리 ================= -->
+<section class="screen" id="vd-07" data-title="업체 처리" data-code="VD-07">
+ <div class="vd">
+  <div class="vdtop"><a class="small" href="#vd-03">← 통합 할 일</a><b>픽업 재배차</b><span class="b b-urgent">기한 오늘 18:00</span></div>
+  <div class="vdbody">
+    <div class="small muted">한-아프리카 정상회의 (○○PCO) · 베트남 장관 대표단 · 입국 픽업</div>
+    <section class="box" style="padding:14px 16px;display:grid;gap:8px">
+      <h3 style="margin:0;font-size:14.5px"><span class="anno">1</span>무엇이 바뀌었나요</h3>
+      <div class="diff"><span class="muted" style="width:72px">도착 공항</span><span class="strike">인천 ICN</span><span>→</span><b>김포 GMP</b></div>
+      <div class="diff"><span class="muted" style="width:72px">도착 시각</span><span class="strike">14:00 KST</span><span>→</span><b>19:30 KST</b></div>
+      <div class="diff"><span class="muted" style="width:72px">탑승 인원</span><span>3명 (변동 없음)</span></div>
+    </section>
+    <section class="box" style="padding:14px 16px;display:grid;gap:6px">
+      <h3 style="margin:0;font-size:14.5px">현재 배차 (변경 전)</h3>
+      <span class="small">의전 세단 · 12가3456 · 홍기사 · 13:00 출발</span>
+    </section>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="anno">2</span><span class="btn primary">확인했습니다</span><span class="small muted">누르면 PCO 화면에 "처리중"으로 표시됩니다</span></div>
+    <section class="box" style="padding:14px 16px;display:grid;gap:10px;opacity:.6">
+      <h3 style="margin:0;font-size:14.5px">새 배차 입력 <span class="small muted">(확인 후 활성)</span></h3>
+      <div class="form3"><div class="field"><label>출발 시각 *</label><div class="inp">18:30</div></div><div class="field"><label>차량 *</label><div class="inp">차량 선택</div></div><div class="field"><label>기사 *</label><div class="inp">기사 선택</div></div></div>
+      <div><span class="btn">반영 완료</span></div>
+    </section>
+    <div class="stop"><b><span class="anno">3</span>⛔ 무효 상태 예시 — 이 요청은 취소되었습니다</b><span class="small">진행 중이던 작업을 멈춰주세요. 새 요청이 따로 도착합니다.</span><div><span class="btn primary">작업 중지 확인</span></div></div>
+  </div>
+ </div>
+</section>
+
+    </div>
+  </div>
+
+  <aside class="review" id="review" aria-live="polite"></aside>
+</main>
+
+<script>
+const SCREENS = [
+  {id:"pco-e01", label:"PCO-E01 홈"},
+  {id:"pco-e02", label:"PCO-E02 이슈 보드"},
+  {id:"pco-e03", label:"PCO-E03 이슈 상세"},
+  {id:"pco-e05", label:"PCO-E05 대표단 360"},
+  {id:"px-03",   label:"PX-03 대리인 홈"},
+  {id:"px-08",   label:"PX-08 대리인 항공"},
+  {id:"vd-03",   label:"VD-03·07 업체"}
+];
+const REVIEW = {
+  "pco-e01":{t:"행사 홈",pts:[
+    ["F1-1","'내 담당만' 토글을 상단 고정. 기본값 켜짐 (D-UX-04)"],
+    ["F1-2","'지금 처리할 일'이 스크롤 없이 첫 화면에 보이는가. 숫자 4개 + 긴급 목록 3줄 구성이 적절한가"],
+    ["F1-3","두 번째 줄에 '초청 진행'(사람)을 둠. 환급 검토는 고도화로 빠져 '초청 미응답'으로 교체"],
+    ["F1-4","72시간 일정. 행사 기간에는 '오늘 타임라인'으로 바뀌어 위로 올라올 예정"],
+    ["F1-5","서비스 진행은 가장 아래. 막대 5개로 충분한가"]]},
+  "pco-e02":{t:"변경 이슈 보드",pts:[
+    ["F2-1","필터 칩: 미종결·서비스·업체·내 담당만. 더 필요한 필터가 있나"],
+    ["F2-2","긴급도 열에 '남은 시간'을 직접 표기 (긴급 대신 '3시간')"],
+    ["F2-3","'막힌 곳' 열 — 누가 지금 안 하고 있는지. 내 판단이면 굵게"],
+    ["F2-4","모바일은 표 대신 카드. 카드에 담은 4가지 정보(긴급도·대표단·변경·막힌 곳)가 충분한가"]]},
+  "pco-e03":{t:"변경 이슈 상세",pts:[
+    ["F3-1","최상단에 최초 변경을 '이전 → 이후'로 고정"],
+    ["F3-2","연쇄를 차수 배지 + 들여쓰기 트리로 표현. 모바일은 들여쓰기 1단으로 축소"],
+    ["F3-3","판단 항목은 결정에 필요한 정보와 선택지별 다음 연쇄를 그 자리에서 보여줌"],
+    ["F3-4","이슈 단위 행동 3개(추가·정정 요청·강제 종결)를 트리 아래에 둠. 위치가 적절한가"]]},
+  "pco-e05":{t:"대표단 360",pts:[
+    ["F4-1","헤더에 상태·등급·완결률·진행 이슈. 주요 버튼은 상태에 따라 1개 (확정 상태 = 일정표 발행)"],
+    ["F4-2","필수 누락 알림을 탭 위에 고정. 누락이 없으면 사라짐"],
+    ["F4-3","참가자 × 서비스 매트릭스 — 칸마다 상태 + 지원 방식. 엑셀을 대체할 수 있는가"],
+    ["F4-4","모바일은 참가자별 펼침 목록. 문제 있는 참가자를 요약 배지로 표시"]]},
+  "px-03":{t:"대리인 홈",pts:[
+    ["F5-1","언어 전환 버튼 상단 고정. 눌러서 한국어/영어 전환해 보세요"],
+    ["F5-2","'다음 할 일' 하나를 가장 크게 (D-UX-05)"],
+    ["F5-3","필수 항목 진행률과 남은 개수, '다음 빈 항목으로' 바로가기"],
+    ["F5-4","체크리스트 항목마다 남은 필수 개수 배지. 항공을 누르면 PX-08로 이동"]]},
+  "px-08":{t:"대리인 항공",pts:[
+    ["F6-1","상단 안내로 지원/자비의 차이를 먼저 설명"],
+    ["F6-2","지원·확정: 항공편 카드 + '변경 요청' (확정 후 변경은 확인 창을 거침)"],
+    ["F6-3","자비: 요청 대신 항공편 직접 입력. 비어 있는 필수 칸은 굵은 테두리"],
+    ["F6-4","완료된 참가자 카드는 접어서 남은 일에 집중"]]},
+  "vd-03":{t:"업체 통합 할 일 · 처리",pts:[
+    ["F7-1","여러 PCO의 할 일을 한 목록에 긴급순으로. 상단 요약 숫자"],
+    ["F7-2","프로젝트와 PCO 이름을 함께 표기해 혼동 방지"],
+    ["F7-3","'예정'(대기) 항목은 흐리게, 버튼 없음. 행을 누르면 처리 화면(VD-07)"],
+    ["F7-4","처리 화면: 변경 전/후 → 확인 → 새 값 입력 → 반영 완료. 무효(작업 중지)는 가장 강하게"]]}
+};
+REVIEW["vd-07"]=REVIEW["vd-03"];
+
+const frame=document.getElementById('frame');
+const picker=document.getElementById('picker');
+const review=document.getElementById('review');
+
+SCREENS.forEach(s=>{
+  const b=document.createElement('button');
+  b.type='button';b.textContent=s.label;b.dataset.id=s.id;b.setAttribute('role','tab');
+  b.addEventListener('click',()=>{location.hash=s.id});
+  picker.appendChild(b);
+});
+
+/* PCO shell nav injected */
+const NAV=[["home","홈","pco-e01",null],["issues","변경 이슈","pco-e02","7"],["delegations","대표단","pco-e05",null],["services","서비스 현황","pco-e01",null],["programs","일정","pco-e01",null]];
+document.querySelectorAll('.pco').forEach(p=>{
+  const act=p.dataset.active;
+  const side=document.createElement('nav');side.className='side d-only';side.setAttribute('aria-label','행사 메뉴');
+  side.innerHTML='<div class="brand">서비스명</div><div class="ev"><span>한-아프리카 정상회의 2026</span><span>▾</span></div>'+
+    NAV.map(n=>`<a href="#${n[2]}" ${n[0]===act?'aria-current="page"':''}><span>${n[1]}</span>${n[3]?`<span class="cnt hot">${n[3]}</span>`:''}</a>`).join('')+
+    '<div class="grp">커뮤니케이션</div><a href="#pco-e01"><span>초청 발송</span></a><a href="#pco-e01"><span>일정표 발행</span></a><a href="#pco-e01"><span>주최측 요청</span><span class="cnt">1</span></a><div class="grp">관리</div><a href="#pco-e01"><span>행사 설정</span></a><a href="#pco-e01"><span>종료·정산</span></a>';
+  p.insertBefore(side,p.firstChild);
+  const tab=document.createElement('nav');tab.className='tabbar';tab.setAttribute('aria-label','하단 메뉴');
+  const T=[["home","홈","pco-e01","H"],["issues","이슈","pco-e02","7"],["delegations","대표단","pco-e05","D"],["programs","일정","pco-e01","S"],["more","더보기","pco-e01","…"]];
+  tab.innerHTML=T.map(t=>`<a href="#${t[2]}" ${t[0]===act?'aria-current="page"':''}><span class="ic">${t[3]}</span>${t[1]}</a>`).join('');
+  p.appendChild(tab);
+});
+
+document.querySelectorAll('tr.go').forEach(tr=>tr.addEventListener('click',()=>{location.hash=tr.dataset.go}));
+
+function show(){
+  let id=(location.hash||'#pco-e01').slice(1);
+  if(id==='pco-e04') id='pco-e05';
+  if(!document.getElementById(id)) id='pco-e01';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
+  const pid = id==='vd-07' ? 'vd-03' : id;
+  picker.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.id===pid?'true':'false'));
+  const r=REVIEW[id];const sc=document.getElementById(id);
+  review.innerHTML=`<h2>검수 포인트 · ${r.t}</h2><p class="sid">${sc.dataset.code} · 화면 속 검은 번호와 대응</p><ol>${r.pts.map((p,i)=>`<li><b>${i+1}</b><span><span class="muted small">${p[0]}</span><br>${p[1]}</span></li>`).join('')}</ol>
+  <div class="legend"><b style="color:var(--ink)">상태 표기 (흑백 단계)</b>
+  <div><span class="b b-urgent">긴급</span>지금 행동, 늦으면 사고</div>
+  <div><span class="b b-action">조치 필요</span>행동 필요</div>
+  <div><span class="b b-progress">처리중</span>누군가 처리 중</div>
+  <div><span class="b b-done">완료</span>끝남</div>
+  <div><span class="b b-wait">대기</span>아직 차례 아님</div>
+  <div><span class="b b-void">무효</span>의미 없어짐</div></div>
+  <p class="note">색·글꼴은 ④ 테마 단계에서 정합니다. 지금은 배치·우선순위·흐름만 봐주세요. 피드백은 "F3-2 …"처럼 번호로 주시면 됩니다.</p>`;
+  frame.scrollTop=0;
+}
+window.addEventListener('hashchange',show);
+
+function setDev(d){
+  frame.classList.toggle('desktop',d==='desktop');frame.classList.toggle('mobile',d==='mobile');
+  document.querySelectorAll('.device button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.dev===d?'true':'false'));
+  try{localStorage.setItem('fm-dev',d)}catch(e){}
+}
+document.querySelectorAll('.device button').forEach(b=>b.addEventListener('click',()=>setDev(b.dataset.dev)));
+let saved=null;try{saved=localStorage.getItem('fm-dev')}catch(e){}
+setDev(saved || (window.innerWidth<900?'mobile':'desktop'));
+
+document.getElementById('annoToggle').addEventListener('change',e=>frame.classList.toggle('show-anno',e.target.checked));
+
+/* proxy language toggle (EN <-> KO) */
+let lang='en';
+document.querySelectorAll('[data-ko]').forEach(el=>{el.dataset.en=el.innerHTML});
+document.querySelectorAll('[data-langtoggle]').forEach(b=>b.addEventListener('click',()=>{
+  lang = lang==='en'?'ko':'en';
+  document.querySelectorAll('[data-ko]').forEach(el=>{el.innerHTML = lang==='ko'?el.dataset.ko:el.dataset.en});
+}));
+show();
+</script>
+</body>
+</html>

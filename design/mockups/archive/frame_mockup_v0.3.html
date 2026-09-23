@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>프레임 목업 v0.3 · shadcn 기본 테마 · VIP 초청자 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16?plugins=container-queries"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','"Noto Sans KR"','-apple-system','"Apple SD Gothic Neo"','"Malgun Gothic"','sans-serif'] },
+      colors: {
+        border:'hsl(var(--border))', input:'hsl(var(--input))', ring:'hsl(var(--ring))',
+        background:'hsl(var(--background))', foreground:'hsl(var(--foreground))',
+        primary:{DEFAULT:'hsl(var(--primary))',foreground:'hsl(var(--primary-foreground))'},
+        secondary:{DEFAULT:'hsl(var(--secondary))',foreground:'hsl(var(--secondary-foreground))'},
+        destructive:{DEFAULT:'hsl(var(--destructive))',foreground:'hsl(var(--destructive-foreground))'},
+        muted:{DEFAULT:'hsl(var(--muted))',foreground:'hsl(var(--muted-foreground))'},
+        accent:{DEFAULT:'hsl(var(--accent))',foreground:'hsl(var(--accent-foreground))'},
+        card:{DEFAULT:'hsl(var(--card))',foreground:'hsl(var(--card-foreground))'}
+      },
+      borderRadius: { xl:'calc(var(--radius) + 4px)', lg:'var(--radius)', md:'calc(var(--radius) - 2px)', sm:'calc(var(--radius) - 4px)' }
+    }
+  }
+}
+</script>
+<style>
+/* shadcn/ui 기본 테마 (base color: neutral) */
+:root{
+  --background:0 0% 100%; --foreground:0 0% 3.9%;
+  --card:0 0% 100%; --card-foreground:0 0% 3.9%;
+  --primary:0 0% 9%; --primary-foreground:0 0% 98%;
+  --secondary:0 0% 96.1%; --secondary-foreground:0 0% 9%;
+  --muted:0 0% 96.1%; --muted-foreground:0 0% 45.1%;
+  --accent:0 0% 96.1%; --accent-foreground:0 0% 9%;
+  --destructive:0 84.2% 60.2%; --destructive-foreground:0 0% 98%;
+  --border:0 0% 89.8%; --input:0 0% 89.8%; --ring:0 0% 3.9%;
+  --radius:0.5rem;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --background:0 0% 3.9%; --foreground:0 0% 98%;
+    --card:0 0% 3.9%; --card-foreground:0 0% 98%;
+    --primary:0 0% 98%; --primary-foreground:0 0% 9%;
+    --secondary:0 0% 14.9%; --secondary-foreground:0 0% 98%;
+    --muted:0 0% 14.9%; --muted-foreground:0 0% 63.9%;
+    --accent:0 0% 14.9%; --accent-foreground:0 0% 98%;
+    --destructive:0 62.8% 30.6%; --destructive-foreground:0 0% 98%;
+    --border:0 0% 14.9%; --input:0 0% 14.9%; --ring:0 0% 83.1%;
+  }
+}
+:root[data-theme="dark"]{
+  --background:0 0% 3.9%; --foreground:0 0% 98%;
+  --card:0 0% 3.9%; --card-foreground:0 0% 98%;
+  --primary:0 0% 98%; --primary-foreground:0 0% 9%;
+  --secondary:0 0% 14.9%; --secondary-foreground:0 0% 98%;
+  --muted:0 0% 14.9%; --muted-foreground:0 0% 63.9%;
+  --accent:0 0% 14.9%; --accent-foreground:0 0% 98%;
+  --destructive:0 62.8% 30.6%; --destructive-foreground:0 0% 98%;
+  --border:0 0% 14.9%; --input:0 0% 14.9%; --ring:0 0% 83.1%;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+.screen{display:none}.screen.on{display:block}
+#frame.mobile{width:390px;height:812px;overflow-y:auto;border-width:10px;border-color:hsl(var(--foreground));border-radius:2.25rem}
+#frame.desktop{width:1280px;min-height:820px}
+#frame:not(.show-anno) .anno{display:none}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+<style type="text/tailwindcss">
+@layer base{
+  *{@apply border-border}
+  body{@apply bg-muted/60 text-foreground antialiased}
+}
+@layer components{
+  /* Button */
+  .btn{@apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 cursor-pointer}
+  .btn-default{@apply bg-primary text-primary-foreground shadow hover:bg-primary/90}
+  .btn-outline{@apply border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground}
+  .btn-secondary{@apply bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80}
+  .btn-ghost{@apply hover:bg-accent hover:text-accent-foreground}
+  .btn-destructive{@apply bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90}
+  .btn-sm{@apply h-8 rounded-md px-3 text-xs}
+  /* Badge */
+  .badge{@apply inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap transition-colors}
+  .badge-default{@apply border-transparent bg-primary text-primary-foreground shadow}
+  .badge-secondary{@apply border-transparent bg-secondary text-secondary-foreground}
+  .badge-destructive{@apply border-transparent bg-destructive text-destructive-foreground shadow}
+  .badge-outline{@apply text-foreground}
+  /* 상태 매핑 (shadcn 기본 변형만 사용) */
+  .st-urgent{@apply badge badge-destructive}
+  .st-action{@apply badge badge-default}
+  .st-progress{@apply badge badge-outline border-dashed}
+  .st-done{@apply badge badge-secondary}
+  .st-wait{@apply badge badge-outline text-muted-foreground}
+  .st-void{@apply badge badge-outline text-muted-foreground line-through}
+  /* Card */
+  .card{@apply rounded-xl border bg-card text-card-foreground shadow}
+  .card-h{@apply flex flex-col space-y-1.5 p-6}
+  .card-t{@apply font-semibold leading-none tracking-tight}
+  .card-d{@apply text-sm text-muted-foreground}
+  .card-c{@apply p-6 pt-0}
+  /* Table */
+  .tbl{@apply w-full caption-bottom text-sm}
+  .tbl thead tr{@apply border-b}
+  .tbl th{@apply h-10 px-3 text-left align-middle font-medium text-muted-foreground whitespace-nowrap}
+  .tbl tbody tr{@apply border-b transition-colors hover:bg-muted/50}
+  .tbl tbody tr:last-child{@apply border-0}
+  .tbl td{@apply p-3 align-middle}
+  /* Tabs */
+  .tabs{@apply inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground}
+  .tab{@apply inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium}
+  .tab-on{@apply bg-background text-foreground shadow}
+  /* Input / Label */
+  .input{@apply flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm text-muted-foreground}
+  .label{@apply text-sm font-medium leading-none}
+  /* Progress */
+  .progress{@apply relative h-2 w-full overflow-hidden rounded-full bg-primary/20}
+  .progress > i{@apply block h-full bg-primary}
+  /* Alert */
+  .alert{@apply relative w-full rounded-lg border px-4 py-3 text-sm}
+  /* Switch */
+  .switch{@apply inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent bg-primary shadow-sm}
+  .switch > span{@apply block h-4 w-4 rounded-full bg-background shadow-lg translate-x-4}
+  /* Radio */
+  .radio{@apply aspect-square h-4 w-4 rounded-full border border-primary shadow grid place-items-center shrink-0 mt-0.5}
+  .radio-on::after{content:"";@apply block h-2 w-2 rounded-full bg-primary}
+  /* 검수 번호 */
+  .anno{@apply inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-foreground text-background text-[11px] font-bold mr-1.5 align-[1px]}
+  .strike{@apply line-through text-muted-foreground}
+  .urgent-edge{@apply border-l-4 border-l-destructive}
+}
+</style>
+</head>
+<body class="font-sans text-sm">
+
+<!-- 프로토타입 상단 바 -->
+<header class="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+    <div class="flex items-baseline gap-2"><h1 class="text-[15px] font-semibold">프레임 목업</h1><span class="text-xs text-muted-foreground">v0.3 · Tailwind + shadcn/ui 기본 테마</span></div>
+    <div id="picker" class="flex flex-wrap gap-1" role="tablist" aria-label="화면 선택"></div>
+    <div class="ml-auto flex items-center gap-3">
+      <div class="tabs" role="group" aria-label="기기 전환">
+        <button type="button" class="tab" data-dev="desktop">데스크톱</button>
+        <button type="button" class="tab" data-dev="mobile">모바일</button>
+      </div>
+      <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="annoToggle" checked class="h-4 w-4 accent-[hsl(var(--primary))]"> 검수 번호</label>
+    </div>
+  </div>
+</header>
+
+<main class="flex flex-wrap items-start justify-center gap-5 px-4 pt-5 pb-10">
+  <div class="max-w-full flex-none overflow-x-auto">
+    <div id="frame" class="@container relative desktop show-anno overflow-hidden rounded-xl border bg-background shadow-sm">
+
+<!-- ========== PCO-T01 행사 목록 (로그인 후 첫 화면) ========== -->
+<section class="screen" id="pco-t01" data-code="PCO-T01">
+ <div class="pco" data-level="tenant" data-active="events">
+  <div class="main min-w-0 flex flex-col">
+   <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6">
+     <h2 class="text-base font-semibold">행사 목록</h2><span class="text-xs text-muted-foreground">○○PCO · 김초청 (초청 담당자)</span>
+     <div class="ml-auto flex items-center gap-2">
+       <label class="flex items-center gap-2 text-sm"><span class="anno">1</span>내 담당만 <span class="switch"><span></span></span></label>
+       <span class="anno">2</span><button class="btn btn-default btn-sm" data-open="dlg-create">+ 새 행사</button>
+     </div>
+   </div>
+   <div class="grid gap-4 p-4 @3xl:p-6">
+     <div class="flex flex-wrap items-center gap-3">
+       <div class="tabs"><span class="tab tab-on">활성 3</span><span class="tab">준비 중 1</span><span class="tab">종료 2</span><span class="tab">전체 5</span></div>
+       <div class="input h-8 w-full text-sm @3xl:ml-auto @3xl:w-64">행사명·주최 검색</div>
+     </div>
+
+     <div class="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
+       <!-- 카드 1 -->
+       <article class="card flex flex-col">
+         <div class="card-h pb-3">
+           <div class="flex items-start justify-between gap-2">
+             <div class="flex flex-wrap items-center gap-1.5"><span class="anno">3</span><span class="st-action">초청 진행</span><span class="badge badge-outline">D-21</span></div>
+             <div class="relative">
+               <button class="btn btn-ghost btn-sm h-8 w-8 px-0" data-menu="m1" aria-label="행사 메뉴">⋯</button>
+               <div id="m1" class="menu absolute right-0 top-9 z-10 hidden w-48 rounded-md border bg-background p-1 shadow-md text-sm">
+                 <a href="#pco-e01" class="block rounded-sm px-2 py-1.5 hover:bg-accent">행사 열기</a>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent" data-open="dlg-edit">기본 정보 수정</button>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent" data-open="dlg-create">설정 복사해 새 행사</button>
+                 <div class="my-1 h-px bg-border"></div>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left text-destructive hover:bg-accent">행사 취소</button>
+                 <div class="px-2 py-1.5 text-muted-foreground opacity-60" title="초청이 시작된 행사는 삭제할 수 없습니다">삭제 <span class="block text-[11px]">초청 시작 후 삭제 불가 → 행사 취소 사용</span></div>
+               </div>
+             </div>
+           </div>
+           <a href="#pco-e01" class="grid gap-0.5 pt-1 hover:underline underline-offset-4"><h3 class="card-t text-base">한-아프리카 정상회의 2026</h3><span class="text-xs text-muted-foreground">Korea-Africa Summit 2026</span></a>
+         </div>
+         <div class="card-c grid gap-3">
+           <div class="grid gap-1 text-xs text-muted-foreground"><span>2026년 10월 14일 – 18일 · 서울 롯데호텔</span><span>주최: 외교부</span></div>
+           <div class="grid gap-1.5"><div class="flex justify-between text-xs"><span>대표단 확정</span><span class="font-medium">32 / 48</span></div><div class="progress"><i style="width:66%"></i></div></div>
+           <div class="flex flex-wrap gap-1.5"><span class="st-urgent">긴급 이슈 2</span><span class="badge badge-outline">미종결 7</span><span class="badge badge-outline">미응답 7</span></div>
+         </div>
+         <div class="mt-auto flex items-center justify-between border-t px-6 py-3"><span class="text-xs text-muted-foreground">담당 2명 · 업체 6곳</span><a href="#pco-e01" class="btn btn-default btn-sm">행사 열기</a></div>
+       </article>
+       <!-- 카드 2 -->
+       <article class="card flex flex-col">
+         <div class="card-h pb-3">
+           <div class="flex items-start justify-between gap-2">
+             <div class="flex flex-wrap items-center gap-1.5"><span class="st-action">초청 진행</span><span class="badge badge-outline">D-41</span></div>
+             <button class="btn btn-ghost btn-sm h-8 w-8 px-0" aria-label="행사 메뉴">⋯</button>
+           </div>
+           <a href="#pco-e01" class="grid gap-0.5 pt-1 hover:underline underline-offset-4"><h3 class="card-t text-base">서울 바이오포럼 2026</h3><span class="text-xs text-muted-foreground">Seoul Bio Forum 2026</span></a>
+         </div>
+         <div class="card-c grid gap-3">
+           <div class="grid gap-1 text-xs text-muted-foreground"><span>2026년 11월 3일 – 5일 · 코엑스</span><span>주최: 보건복지부</span></div>
+           <div class="grid gap-1.5"><div class="flex justify-between text-xs"><span>대표단 확정</span><span class="font-medium">12 / 20</span></div><div class="progress"><i style="width:60%"></i></div></div>
+           <div class="flex flex-wrap gap-1.5"><span class="badge badge-outline">미종결 2</span><span class="badge badge-outline">미응답 3</span></div>
+         </div>
+         <div class="mt-auto flex items-center justify-between border-t px-6 py-3"><span class="text-xs text-muted-foreground">담당 1명 · 업체 4곳</span><a href="#pco-e01" class="btn btn-default btn-sm">행사 열기</a></div>
+       </article>
+       <!-- 카드 3: 준비 중 -->
+       <article class="card flex flex-col">
+         <div class="card-h pb-3">
+           <div class="flex items-start justify-between gap-2">
+             <div class="flex flex-wrap items-center gap-1.5"><span class="st-wait">준비 중</span><span class="badge badge-outline">D-140</span></div>
+             <div class="relative">
+               <button class="btn btn-ghost btn-sm h-8 w-8 px-0" data-menu="m3" aria-label="행사 메뉴">⋯</button>
+               <div id="m3" class="menu absolute right-0 top-9 z-10 hidden w-48 rounded-md border bg-background p-1 shadow-md text-sm">
+                 <a href="#pco-e01" class="block rounded-sm px-2 py-1.5 hover:bg-accent">행사 열기</a>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent" data-open="dlg-edit">기본 정보 수정</button>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent" data-open="dlg-create">설정 복사해 새 행사</button>
+                 <div class="my-1 h-px bg-border"></div>
+                 <button class="block w-full rounded-sm px-2 py-1.5 text-left text-destructive hover:bg-accent" data-open="dlg-delete">삭제</button>
+               </div>
+             </div>
+           </div>
+           <a href="#pco-e01" class="grid gap-0.5 pt-1 hover:underline underline-offset-4"><h3 class="card-t text-base">아시아 해양장관회의 2027</h3><span class="text-xs text-muted-foreground">Asia Ocean Ministerial 2027</span></a>
+         </div>
+         <div class="card-c grid gap-3">
+           <div class="grid gap-1 text-xs text-muted-foreground"><span>2027년 2월 10일 – 12일 · 부산 벡스코</span><span>주최: 해양수산부</span></div>
+           <div class="grid gap-2 rounded-md border border-dashed p-3 text-xs"><span class="font-medium">설정 진행 3 / 6</span><span class="text-muted-foreground">남은 설정: 지원 정책 · 동의서 · 대표단 등록</span></div>
+         </div>
+         <div class="mt-auto flex items-center justify-between border-t px-6 py-3"><span class="text-xs text-muted-foreground">담당 1명 · 업체 0곳</span><a href="#pco-e01" class="btn btn-outline btn-sm">설정 계속하기</a></div>
+       </article>
+       <!-- 새 행사 카드 -->
+       <button type="button" data-open="dlg-create" class="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+         <span class="text-2xl">+</span><span class="text-sm font-medium">새 행사 만들기</span><span class="text-xs">빈 행사 또는 기존 행사 설정 복사</span>
+       </button>
+     </div>
+     <p class="text-xs text-muted-foreground"><span class="anno">4</span>종료 탭: 정산 중 1(한-중앙아 경제협력 포럼) · 정산 완료 1(읽기 전용, 파기 예정일 표시)</p>
+   </div>
+  </div>
+ </div>
+
+ <!-- 새 행사 Dialog -->
+ <div id="dlg-create" class="dlg absolute inset-0 z-30 hidden bg-black/60">
+  <div class="mx-auto mt-10 w-[calc(100%-2rem)] max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+   <div class="grid gap-1.5 pb-4"><h3 class="text-lg font-semibold leading-none">새 행사 만들기</h3><p class="text-sm text-muted-foreground">기본 정보만 입력하면 됩니다. 업체·지원 정책 등은 행사 설정에서 이어서 진행합니다.</p></div>
+   <div class="grid gap-4">
+     <div class="grid gap-2"><span class="label">시작 방법</span><div class="tabs w-full"><span class="tab tab-on flex-1">빈 행사</span><span class="tab flex-1">기존 행사 설정 복사</span></div></div>
+     <div class="grid gap-3 @xl:grid-cols-2">
+       <div class="grid gap-2"><span class="label">행사명 (국문) *</span><div class="input">예: 한-아프리카 정상회의 2026</div></div>
+       <div class="grid gap-2"><span class="label">행사명 (영문) *</span><div class="input">Korea-Africa Summit 2026</div></div>
+       <div class="grid gap-2"><span class="label">행사 유형 *</span><div class="input justify-between">국제회의 <span>⌄</span></div></div>
+       <div class="grid gap-2"><span class="label">주최 기관 *</span><div class="input">외교부</div></div>
+       <div class="grid gap-2"><span class="label">시작일 *</span><div class="input">2026년 10월 14일</div></div>
+       <div class="grid gap-2"><span class="label">종료일 *</span><div class="input">2026년 10월 18일</div></div>
+       <div class="grid gap-2"><span class="label">개최 도시·장소 *</span><div class="input">서울 · 롯데호텔</div></div>
+       <div class="grid gap-2"><span class="label">기준 시간대 *</span><div class="input justify-between">Asia/Seoul (KST) <span>⌄</span></div></div>
+     </div>
+     <div class="grid gap-2"><span class="label">초청자 화면 언어</span><div class="flex gap-4 text-sm"><label class="flex items-center gap-2"><span class="grid h-4 w-4 place-items-center rounded-sm bg-primary text-[10px] text-primary-foreground">✓</span>한국어</label><label class="flex items-center gap-2"><span class="grid h-4 w-4 place-items-center rounded-sm bg-primary text-[10px] text-primary-foreground">✓</span>English</label></div></div>
+   </div>
+   <div class="flex justify-end gap-2 pt-6"><button class="btn btn-outline" data-close>취소</button><button class="btn btn-default" data-close>행사 만들기</button></div>
+  </div>
+ </div>
+
+ <!-- 기본 정보 수정 Dialog -->
+ <div id="dlg-edit" class="dlg absolute inset-0 z-30 hidden bg-black/60">
+  <div class="mx-auto mt-10 w-[calc(100%-2rem)] max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+   <div class="grid gap-1.5 pb-4"><h3 class="text-lg font-semibold leading-none">행사 기본 정보 수정</h3><p class="text-sm text-muted-foreground">한-아프리카 정상회의 2026</p></div>
+   <div class="grid gap-3 @xl:grid-cols-2">
+     <div class="grid gap-2"><span class="label">행사명 (국문) *</span><div class="input text-foreground">한-아프리카 정상회의 2026</div></div>
+     <div class="grid gap-2"><span class="label">행사명 (영문) *</span><div class="input text-foreground">Korea-Africa Summit 2026</div></div>
+     <div class="grid gap-2"><span class="label">시작일 *</span><div class="input text-foreground">2026년 10월 14일</div></div>
+     <div class="grid gap-2"><span class="label">종료일 *</span><div class="input text-foreground">2026년 10월 18일</div></div>
+   </div>
+   <div class="alert mt-4 text-xs text-muted-foreground">초청이 진행 중인 행사입니다. 날짜를 바꾸면 대리인에게 안내 메일이 발송되고, 이미 확정된 항공·숙박과 맞지 않는 항목은 변경 이슈로 생성됩니다.</div>
+   <div class="flex justify-end gap-2 pt-6"><button class="btn btn-outline" data-close>취소</button><button class="btn btn-default" data-close>저장</button></div>
+  </div>
+ </div>
+
+ <!-- 삭제 AlertDialog -->
+ <div id="dlg-delete" class="dlg absolute inset-0 z-30 hidden bg-black/60">
+  <div class="mx-auto mt-24 w-[calc(100%-2rem)] max-w-md rounded-lg border bg-background p-6 shadow-lg">
+   <div class="grid gap-2"><h3 class="text-lg font-semibold">행사를 삭제할까요?</h3><p class="text-sm text-muted-foreground">'아시아 해양장관회의 2027'과 입력된 설정이 모두 삭제되며 되돌릴 수 없습니다. 아직 초청이 시작되지 않은 행사만 삭제할 수 있습니다.</p></div>
+   <div class="flex justify-end gap-2 pt-6"><button class="btn btn-outline" data-close>취소</button><button class="btn btn-destructive" data-close>삭제</button></div>
+  </div>
+ </div>
+</section>
+
+
+<!-- ========== PCO-E01 행사 홈 ========== -->
+<section class="screen" id="pco-e01" data-code="PCO-E01">
+ <div class="pco" data-active="home">
+  <div class="main min-w-0 flex flex-col">
+   <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6">
+     <h2 class="text-base font-semibold">홈</h2><span class="badge badge-outline">D-21</span>
+     <div class="ml-auto flex items-center gap-2">
+       <label class="flex items-center gap-2 text-sm"><span class="anno">1</span>내 담당만 <span class="switch"><span></span></span></label>
+       <button class="btn btn-outline btn-sm hidden @3xl:inline-flex">알림 3</button>
+     </div>
+   </div>
+   <div class="grid gap-5 p-4 @3xl:p-6">
+     <section class="grid gap-3">
+       <h3 class="text-sm font-semibold"><span class="anno">2</span>지금 처리할 일</h3>
+       <div class="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+         <a href="#pco-e02" class="card p-4 grid gap-1 border-destructive/60 hover:bg-muted/40"><span class="text-xs text-muted-foreground">긴급 이슈</span><span class="text-2xl font-bold text-destructive">2</span></a>
+         <a href="#pco-e03" class="card p-4 grid gap-1 hover:bg-muted/40"><span class="text-xs text-muted-foreground">내 판단 필요</span><span class="text-2xl font-bold">3</span></a>
+         <a href="#pco-e05" class="card p-4 grid gap-1 hover:bg-muted/40"><span class="text-xs text-muted-foreground">초청 미응답</span><span class="text-2xl font-bold">7</span></a>
+         <a href="#pco-e01" class="card p-4 grid gap-1 hover:bg-muted/40"><span class="text-xs text-muted-foreground">주최측 요청</span><span class="text-2xl font-bold">1</span></a>
+       </div>
+       <div class="card overflow-hidden">
+         <a href="#pco-e03" class="urgent-edge grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-3 hover:bg-muted/50 @3xl:grid-cols-[110px_80px_1fr_auto] @3xl:items-center">
+           <span><span class="st-urgent">긴급 · 3시간</span></span><span class="hidden text-xs text-muted-foreground @3xl:block">CHG-042</span>
+           <span class="col-span-2 @3xl:col-span-1">베트남 장관 대표단 · 도착 <span class="strike">14:00</span> → 19:30 · 픽업 재배차 미확인</span>
+           <span class="row-start-1 col-start-2 text-xs text-muted-foreground @3xl:row-auto @3xl:col-auto">수송 업체</span>
+         </a>
+         <a href="#pco-e03" class="urgent-edge grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-3 hover:bg-muted/50 @3xl:grid-cols-[110px_80px_1fr_auto] @3xl:items-center">
+           <span><span class="st-urgent">긴급 · 20시간</span></span><span class="hidden text-xs text-muted-foreground @3xl:block">CHG-045</span>
+           <span class="col-span-2 @3xl:col-span-1">케냐 대통령 대표단 · 공항 ICN → GMP · 공항 의전 재배정</span>
+           <span class="row-start-1 col-start-2 text-xs text-muted-foreground @3xl:row-auto @3xl:col-auto">의전 업체</span>
+         </a>
+         <a href="#pco-e03" class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 px-4 py-3 hover:bg-muted/50 @3xl:grid-cols-[110px_80px_1fr_auto] @3xl:items-center">
+           <span><span class="st-action">내 판단</span></span><span class="hidden text-xs text-muted-foreground @3xl:block">CHG-039</span>
+           <span class="col-span-2 @3xl:col-span-1">가나 장관 대표단 · 환영 만찬 참석 가능 여부</span>
+           <span class="row-start-1 col-start-2 text-xs text-muted-foreground @3xl:row-auto @3xl:col-auto">나</span>
+         </a>
+       </div>
+       <a href="#pco-e02" class="btn btn-ghost btn-sm w-fit -ml-2">변경 이슈 전체 보기</a>
+     </section>
+
+     <div class="grid gap-5 @3xl:grid-cols-2">
+       <section class="card">
+         <div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t"><span class="anno">3</span>초청 진행</h3><span class="text-xs text-muted-foreground">확정 32 / 48</span></div></div>
+         <div class="card-c grid gap-3">
+           <div class="progress"><i style="width:66%"></i></div>
+           <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span>입력 중 8</span><span>열람 4</span><span>미열람 3</span><span class="font-semibold text-destructive">반송 1</span></div>
+           <button class="btn btn-outline w-fit">미응답 7개 대표단 독촉</button>
+         </div>
+       </section>
+       <section class="card">
+         <div class="card-h pb-3"><h3 class="card-t"><span class="anno">4</span>다가오는 일정 · 72시간</h3></div>
+         <div class="card-c grid gap-2.5">
+           <div class="grid grid-cols-[88px_1fr_auto] items-center gap-2"><span class="text-xs text-muted-foreground">내일 14:00</span><span>입국 3개 대표단</span><span class="st-done">배차 완료</span></div>
+           <div class="grid grid-cols-[88px_1fr_auto] items-center gap-2"><span class="text-xs text-muted-foreground">내일 18:00</span><span>환영 만찬</span><span class="st-wait">가안</span></div>
+           <div class="grid grid-cols-[88px_1fr_auto] items-center gap-2"><span class="text-xs text-muted-foreground">모레 10:00</span><span>본회의 1세션</span><span class="st-done">확정</span></div>
+         </div>
+       </section>
+     </div>
+
+     <section class="card">
+       <div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t"><span class="anno">5</span>서비스 진행</h3><a href="#pco-e01" class="text-xs text-muted-foreground underline-offset-4 hover:underline">서비스 현황</a></div></div>
+       <div class="card-c grid grid-cols-2 gap-4 @3xl:grid-cols-5">
+         <div class="grid gap-1.5 text-xs"><span>항공 41 / 48</span><div class="progress"><i style="width:85%"></i></div></div>
+         <div class="grid gap-1.5 text-xs"><span>숙박 44 / 48</span><div class="progress"><i style="width:92%"></i></div></div>
+         <div class="grid gap-1.5 text-xs"><span>수송 38 / 52</span><div class="progress"><i style="width:73%"></i></div></div>
+         <div class="grid gap-1.5 text-xs"><span>공항 의전 40 / 48</span><div class="progress"><i style="width:83%"></i></div></div>
+         <div class="grid gap-1.5 text-xs"><span>식이 46 / 48</span><div class="progress"><i style="width:96%"></i></div></div>
+       </div>
+     </section>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ========== PCO-E02 변경 이슈 보드 ========== -->
+<section class="screen" id="pco-e02" data-code="PCO-E02">
+ <div class="pco" data-active="issues">
+  <div class="main min-w-0 flex flex-col">
+   <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6"><h2 class="text-base font-semibold">변경 이슈</h2><span class="text-xs text-muted-foreground">미종결 7 · 긴급 2 · 주의 3</span></div>
+   <div class="grid gap-4 p-4 @3xl:p-6">
+     <div class="flex flex-wrap items-center gap-2"><span class="anno">1</span>
+       <button class="btn btn-secondary btn-sm">미종결</button><button class="btn btn-outline btn-sm">서비스: 전체</button><button class="btn btn-outline btn-sm">업체: 전체</button><button class="btn btn-secondary btn-sm">내 담당만</button>
+       <div class="input hidden h-8 w-56 text-sm @3xl:flex">대표단 검색</div>
+       <span class="ml-auto text-xs text-muted-foreground">정렬: 급한 순</span>
+     </div>
+     <div class="card hidden overflow-hidden @3xl:block">
+       <table class="tbl">
+         <thead><tr><th><span class="anno">2</span>긴급도</th><th>이슈</th><th>대표단</th><th>변경 내용</th><th>진행</th><th><span class="anno">3</span>막힌 곳</th></tr></thead>
+         <tbody>
+           <tr class="go urgent-edge cursor-pointer" data-go="pco-e03"><td><span class="st-urgent">3시간</span></td><td class="text-muted-foreground">CHG-042</td><td class="font-medium">베트남 장관</td><td>도착 <span class="strike">14:00</span> → 19:30</td><td>3 / 6</td><td>수송 · B운수</td></tr>
+           <tr class="go urgent-edge cursor-pointer" data-go="pco-e03"><td><span class="st-urgent">20시간</span></td><td class="text-muted-foreground">CHG-045</td><td class="font-medium">케냐 대통령</td><td>공항 <span class="strike">ICN</span> → GMP</td><td>1 / 4</td><td>공항 의전 · D의전</td></tr>
+           <tr class="go cursor-pointer" data-go="pco-e03"><td><span class="st-action">주의</span></td><td class="text-muted-foreground">CHG-039</td><td class="font-medium">가나 장관</td><td>입국일 <span class="strike">10.13</span> → 10.14</td><td>4 / 5</td><td class="font-semibold">내 판단</td></tr>
+           <tr class="go cursor-pointer" data-go="pco-e03"><td><span class="st-action">주의</span></td><td class="text-muted-foreground">CHG-040</td><td class="font-medium">세네갈 총리</td><td>동반자 +1명</td><td>2 / 5</td><td>숙박 · E호텔</td></tr>
+           <tr class="go cursor-pointer" data-go="pco-e03"><td><span class="st-action">주의</span></td><td class="text-muted-foreground">CHG-044</td><td class="font-medium">르완다 장관</td><td>본회의 불참</td><td>0 / 2</td><td>식음 · C케이터링 <span class="st-wait ml-1">미착수</span></td></tr>
+           <tr class="go cursor-pointer" data-go="pco-e03"><td><span class="text-xs text-muted-foreground">일반</span></td><td class="text-muted-foreground">CHG-041</td><td class="font-medium">에티오피아 차관</td><td>식이 일반 → 할랄</td><td>0 / 1</td><td>식음 · C케이터링</td></tr>
+         </tbody>
+       </table>
+     </div>
+     <div class="grid gap-2 @3xl:hidden">
+       <a href="#pco-e03" class="card urgent-edge grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-urgent">3시간</span><span class="text-xs text-muted-foreground">3 / 6</span></div><b>베트남 장관</b><span class="text-xs">도착 <span class="strike">14:00</span> → 19:30</span><span class="text-xs text-muted-foreground">막힌 곳: 수송 · B운수</span></a>
+       <a href="#pco-e03" class="card urgent-edge grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-urgent">20시간</span><span class="text-xs text-muted-foreground">1 / 4</span></div><b>케냐 대통령</b><span class="text-xs">공항 <span class="strike">ICN</span> → GMP</span><span class="text-xs text-muted-foreground">막힌 곳: 공항 의전</span></a>
+       <a href="#pco-e03" class="card grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-action">주의</span><span class="text-xs text-muted-foreground">4 / 5</span></div><b>가나 장관</b><span class="text-xs">입국일 변경</span><span class="text-xs font-semibold">막힌 곳: 내 판단</span></a>
+       <a href="#pco-e03" class="card grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-action">주의</span><span class="text-xs text-muted-foreground">2 / 5</span></div><b>세네갈 총리</b><span class="text-xs">동반자 +1명</span><span class="text-xs text-muted-foreground">막힌 곳: 숙박</span></a>
+     </div>
+     <p class="text-xs text-muted-foreground"><span class="anno">4</span>미종결이 0건이 되면 이 자리에 "모든 변경이 반영되었습니다"와 최근 종결 이슈가 표시됩니다.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ========== PCO-E03 변경 이슈 상세 ========== -->
+<section class="screen" id="pco-e03" data-code="PCO-E03">
+ <div class="pco" data-active="issues">
+  <div class="main min-w-0 flex flex-col">
+   <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6"><a href="#pco-e02" class="btn btn-ghost btn-sm -ml-2">← 변경 이슈</a><h2 class="text-base font-semibold">CHG-042</h2><span class="st-progress">진행중 3 / 6</span></div>
+   <div class="grid @3xl:grid-cols-[1fr_300px]">
+    <div class="grid gap-4 p-4 @3xl:p-6">
+     <div class="alert grid gap-1.5">
+       <b>베트남 산업통상부 장관 대표단</b>
+       <div class="flex flex-wrap items-center gap-2"><span class="anno">1</span><span class="text-muted-foreground">입국 도착</span><span class="strike">ICN 14:00 KST</span><span>→</span><b>GMP 19:30 KST</b></div>
+       <span class="text-xs text-muted-foreground">시작: 대리인 요청(도착지 변경) · 오늘 09:12</span>
+     </div>
+     <div class="tabs w-fit @3xl:hidden"><span class="tab tab-on">조정 현황</span><span class="tab">활동 기록</span></div>
+     <h3 class="text-sm font-semibold"><span class="anno">2</span>연쇄 조정 현황</h3>
+     <div class="grid">
+       <div class="flex gap-3 border-b border-dashed py-3"><span class="badge badge-outline h-fit">1차</span><div class="grid gap-1"><span class="font-medium">항공 재예약 · A여행사</span><span><span class="st-done">완료 09:10</span> <span class="text-xs text-muted-foreground">VN416 GMP 19:30 확정</span></span></div></div>
+       <div class="flex gap-3 border-b border-dashed py-3 pl-3 @3xl:pl-7"><span class="badge badge-outline h-fit">2차</span><div class="grid gap-1.5"><span class="font-medium">수송 픽업 재배차 · B운수</span><span><span class="st-urgent">조치 필요 · 3시간 남음</span> <span class="text-xs text-muted-foreground">재알림 1회</span></span><div class="flex flex-wrap gap-2"><button class="btn btn-outline btn-sm">재알림</button><button class="btn btn-outline btn-sm">연락처</button><button class="btn btn-ghost btn-sm">해당 없음</button></div></div></div>
+       <div class="flex gap-3 border-b border-dashed py-3 pl-3 @3xl:pl-14"><span class="badge badge-outline h-fit">3차</span><div class="grid gap-2 w-full"><span class="font-medium"><span class="anno">3</span>환영 만찬 참석 가능 여부 · 내 판단</span><span><span class="st-action">판단 필요</span></span>
+         <div class="card grid gap-3 p-4 border-primary">
+           <div class="text-xs text-muted-foreground">만찬 18:00 (롯데호텔) · 새 도착 19:30 · 이동 약 40분</div>
+           <div class="alert border-destructive/50 text-destructive py-2 font-medium">도착이 만찬 시작보다 1시간 30분 늦습니다</div>
+           <div class="grid gap-2.5">
+             <label class="flex gap-2.5"><span class="radio"></span><span class="grid"><span class="label">참석 가능</span><span class="text-xs text-muted-foreground">다음 연쇄 없음</span></span></label>
+             <label class="flex gap-2.5"><span class="radio radio-on"></span><span class="grid"><span class="label">불참</span><span class="text-xs text-muted-foreground">좌석·식수 조정 항목 생성 (C케이터링)</span></span></label>
+             <label class="flex gap-2.5"><span class="radio"></span><span class="grid"><span class="label">늦게 참석</span><span class="text-xs text-muted-foreground">좌석 유지, 입장 동선 메모</span></span></label>
+           </div>
+           <button class="btn btn-default w-fit">결정 완료</button>
+         </div></div></div>
+       <div class="flex gap-3 border-b border-dashed py-3 pl-3 @3xl:pl-20"><span class="badge badge-outline h-fit">4차</span><div class="grid gap-1"><span class="font-medium text-muted-foreground">만찬 좌석·식수 · C케이터링</span><span><span class="st-wait">대기 · 3차 결정 후</span></span></div></div>
+       <div class="flex gap-3 border-b border-dashed py-3 pl-3 @3xl:pl-7"><span class="badge badge-outline h-fit">2차</span><div class="grid gap-1"><span class="font-medium">공항 의전 재배정 · D의전</span><span><span class="st-progress">처리중 · 김OO 확인 10:02</span></span></div></div>
+       <div class="flex gap-3 py-3 pl-3 @3xl:pl-7"><span class="badge badge-outline h-fit">2차</span><div class="grid gap-1"><span class="font-medium">호텔 체크인 시각 · E호텔</span><span><span class="st-done">완료 10:05</span> <span class="text-xs text-muted-foreground">체크인 <span class="strike">15:00</span> → 20:30</span></span></div></div>
+     </div>
+     <div class="flex flex-wrap items-center gap-2"><span class="anno">4</span><button class="btn btn-outline btn-sm">조정 항목 추가</button><button class="btn btn-outline btn-sm">정정 요청</button><button class="btn btn-ghost btn-sm text-destructive">강제 종결</button></div>
+    </div>
+    <aside class="hidden border-l bg-muted/40 p-5 @3xl:grid content-start gap-3 text-xs">
+      <b class="text-sm">활동 기록</b>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">09:10</span><span>A여행사 항공 확정</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">09:12</span><span>이슈 생성, 5개 항목 전개</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">09:15</span><span>B운수·D의전·E호텔 알림</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">09:40</span><span>E호텔 확인</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">10:02</span><span>D의전 확인</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">10:05</span><span>E호텔 완료</span></div>
+      <div class="grid grid-cols-[40px_1fr] gap-2"><span class="text-muted-foreground">11:15</span><span class="text-destructive">B운수 재알림 (미확인 2시간)</span></div>
+    </aside>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ========== PCO-E05 대표단 360 ========== -->
+<section class="screen" id="pco-e05" data-code="PCO-E05">
+ <div class="pco" data-active="delegations">
+  <div class="main min-w-0 flex flex-col">
+   <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6"><a href="#pco-e05" class="btn btn-ghost btn-sm -ml-2">← 대표단</a><h2 class="text-base font-semibold">🇻🇳 베트남 산업통상부 장관 대표단</h2></div>
+   <div class="grid gap-4 p-4 @3xl:p-6">
+     <div class="grid gap-3">
+       <div class="flex flex-wrap items-center gap-2"><span class="anno">1</span><span class="st-done">확정</span><span class="badge badge-outline">의전 B · 장관급</span><span class="text-xs text-muted-foreground">완결률 92% · 구성원 4 · 대리인 2 · 담당 김초청</span><a href="#pco-e03" class="st-progress hover:bg-muted">진행중 이슈 1</a></div>
+       <div class="flex flex-wrap gap-2"><button class="btn btn-default">일정표 발행</button><button class="btn btn-outline">대리인에게 메시지</button><button class="btn btn-outline">대표단 정보 수정</button></div>
+     </div>
+     <div class="alert flex flex-wrap items-center justify-between gap-3 border-destructive/50"><span><span class="anno">2</span><b class="text-destructive">필수 3개 누락</b> <span class="text-xs text-muted-foreground">경호원 여권 정보 2 · 자비 항공편 1 (입국 D-9)</span></span><button class="btn btn-outline btn-sm">누락 항목 독촉</button></div>
+     <div class="overflow-x-auto"><div class="tabs" id="dtabs"><button class="tab tab-on" data-dtab="ov"><span class="anno">3</span>개요</button><button class="tab" data-dtab="pp">참가자 4</button><button class="tab" data-dtab="sv">서비스</button><button class="tab" data-dtab="pg">일정 5</button><button class="tab" data-dtab="is">변경 이슈 1</button><button class="tab" data-dtab="dc">동의·문서</button><button class="tab" data-dtab="hs">이력</button></div></div>
+
+     <!-- 개요 -->
+     <div class="dpane grid gap-4 @5xl:grid-cols-[1fr_320px]" data-pane="ov">
+       <div class="grid content-start gap-4">
+         <section class="card">
+           <div class="card-h pb-3"><h3 class="card-t">대표단 기본 정보</h3></div>
+           <dl class="card-c grid gap-x-6 gap-y-3 text-sm @2xl:grid-cols-2">
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">국가</dt><dd>🇻🇳 베트남</dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">소속 기관</dt><dd>베트남 산업통상부 (MOIT)</dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">대표 VIP</dt><dd>H.E. Nguyen Hong Dien · 장관</dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">의전 등급</dt><dd>B · 장관급 <span class="text-xs text-muted-foreground">(스위트 · 의전 세단 단독 · 영접+패스트트랙)</span></dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">참석 회신</dt><dd>참석 · 2026년 9월 11일</dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">선호 언어</dt><dd>English</dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">지원 정책</dt><dd>VIP + 동반 1인 <span class="text-xs text-muted-foreground">(수행원 항공 자비)</span></dd></div>
+             <div class="grid gap-0.5"><dt class="text-xs text-muted-foreground">담당 PCO</dt><dd>김초청</dd></div>
+           </dl>
+           <div class="border-t px-6 py-4">
+             <div class="pb-2 text-xs text-muted-foreground">초청 진행</div>
+             <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"><li><span class="st-done">발송 9/10</span></li><li class="text-muted-foreground">→</li><li><span class="st-done">열람 9/11</span></li><li class="text-muted-foreground">→</li><li><span class="st-done">제출 9/18</span></li><li class="text-muted-foreground">→</li><li><span class="st-done">확정 9/19</span></li></ol>
+           </div>
+         </section>
+
+         <section class="card">
+           <div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t">구성원</h3><button class="btn btn-ghost btn-sm" data-dtab-go="pp">참가자 탭에서 전체 보기</button></div></div>
+           <div class="card-c hidden @3xl:block">
+             <table class="tbl"><thead><tr><th>이름</th><th>유형</th><th>직함</th><th>국적</th><th>식이</th><th>필수 정보</th></tr></thead>
+             <tbody>
+               <tr class="cursor-pointer" data-sheet><td class="font-medium">H.E. Nguyen Hong Dien</td><td>VIP</td><td>장관</td><td>베트남</td><td>할랄</td><td><span class="st-done">완료</span></td></tr>
+               <tr class="cursor-pointer" data-sheet><td class="font-medium">Mrs. Nguyen Thi Mai</td><td>동반자 · 배우자</td><td>-</td><td>베트남</td><td>일반</td><td><span class="st-done">완료</span></td></tr>
+               <tr class="cursor-pointer" data-sheet><td class="font-medium">Mr. Tran Van Hai</td><td>수행 · 보좌관</td><td>국장</td><td>베트남</td><td>일반</td><td><span class="st-done">완료</span></td></tr>
+               <tr class="cursor-pointer" data-sheet><td class="font-medium">Mr. Le Quoc Bao</td><td>수행 · 경호</td><td>-</td><td>베트남</td><td class="text-muted-foreground">미입력</td><td><span class="st-urgent">3개 누락</span></td></tr>
+             </tbody></table>
+           </div>
+           <div class="card-c grid gap-2 @3xl:hidden">
+             <div class="flex justify-between rounded-md border p-2.5"><span><b>H.E. Nguyen</b> <span class="text-xs text-muted-foreground">VIP · 장관</span></span><span class="st-done">완료</span></div>
+             <div class="flex justify-between rounded-md border p-2.5"><span><b>Mrs. Nguyen</b> <span class="text-xs text-muted-foreground">배우자</span></span><span class="st-done">완료</span></div>
+             <div class="flex justify-between rounded-md border p-2.5"><span><b>Mr. Tran</b> <span class="text-xs text-muted-foreground">보좌관</span></span><span class="st-done">완료</span></div>
+             <div class="flex justify-between rounded-md border border-destructive/50 p-2.5"><span><b>Mr. Le</b> <span class="text-xs text-muted-foreground">경호</span></span><span class="st-urgent">3개 누락</span></div>
+           </div>
+         </section>
+
+         <section class="card">
+           <div class="card-h pb-3"><h3 class="card-t">서비스 현황</h3><p class="card-d">칸마다 상태와 지원 방식. 칸을 누르면 요청 ↔ 확정 비교가 열립니다.</p></div>
+           <div class="card-c hidden overflow-x-auto @3xl:block">
+             <table class="tbl"><thead><tr><th>참가자</th><th>항공</th><th>숙박</th><th>수송</th><th>공항 의전</th></tr></thead>
+             <tbody>
+               <tr><td class="font-medium">H.E. Nguyen</td><td><span class="st-done">확정</span> <span class="text-[11px] text-muted-foreground">지원</span></td><td><span class="st-done">확정</span> <span class="text-[11px] text-muted-foreground">지원</span></td><td><span class="st-action">변경 중</span></td><td><span class="st-progress">처리중</span></td></tr>
+               <tr><td class="font-medium">Mrs. Nguyen</td><td><span class="st-done">확정</span> <span class="text-[11px] text-muted-foreground">지원</span></td><td><span class="st-done">VIP 동숙</span></td><td><span class="st-action">변경 중</span></td><td><span class="st-progress">처리중</span></td></tr>
+               <tr><td class="font-medium">Mr. Tran</td><td><span class="st-done">입력 완료</span> <span class="text-[11px] text-muted-foreground">자비</span></td><td><span class="st-done">확정</span> <span class="text-[11px] text-muted-foreground">지원</span></td><td><span class="st-action">변경 중</span></td><td><span class="st-wait">미제공</span></td></tr>
+               <tr><td class="font-medium">Mr. Le</td><td><span class="st-urgent">미입력</span> <span class="text-[11px] text-muted-foreground">자비</span></td><td><span class="st-done">확정</span> <span class="text-[11px] text-muted-foreground">지원</span></td><td><span class="st-wait">대기</span></td><td><span class="st-wait">미제공</span></td></tr>
+             </tbody></table>
+           </div>
+           <div class="card-c grid gap-2 text-sm @3xl:hidden">
+             <div class="flex justify-between"><span>항공</span><span>확정 2 · 입력 1 · <b class="text-destructive">미입력 1</b></span></div>
+             <div class="flex justify-between"><span>숙박</span><span>확정 4</span></div>
+             <div class="flex justify-between"><span>수송</span><span>변경 중 3 · 대기 1</span></div>
+             <div class="flex justify-between"><span>공항 의전</span><span>처리중 2 · 미제공 2</span></div>
+           </div>
+         </section>
+       </div>
+
+       <aside class="grid content-start gap-4">
+         <section class="card">
+           <div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t">대리인</h3><button class="btn btn-ghost btn-sm">+ 추가</button></div></div>
+           <div class="card-c grid gap-3 text-sm">
+             <div class="grid gap-0.5"><span class="font-medium">Pham Thu Ha <span class="badge badge-secondary ml-1">주 대리인</span></span><span class="text-xs text-muted-foreground">장관 비서실 · ha.pham@moit.gov.vn</span><span class="text-xs text-muted-foreground">마지막 접속 오늘 08:40</span></div>
+             <div class="grid gap-0.5"><span class="font-medium">Do Minh Khoa</span><span class="text-xs text-muted-foreground">주한 베트남 대사관 · khoa.do@mofa.gov.vn</span><span class="text-xs text-muted-foreground">마지막 접속 9월 20일</span></div>
+           </div>
+         </section>
+         <section class="card">
+           <div class="card-h pb-3"><h3 class="card-t">동의 현황</h3><p class="card-d">동의서 v2 · 2026년 9월 11일</p></div>
+           <div class="card-c grid gap-2 text-sm">
+             <div class="flex justify-between"><span>필수 동의</span><span class="st-done">4 / 4</span></div>
+             <div class="flex justify-between"><span>민감정보 (건강·종교)</span><span class="st-done">4 / 4</span></div>
+             <div class="flex justify-between"><span>고유식별정보 (여권)</span><span class="st-action">3 / 4</span></div>
+             <div class="flex justify-between"><span>예외 보관</span><span class="st-wait">요청 안 함</span></div>
+           </div>
+         </section>
+         <section class="card">
+           <div class="card-h pb-3"><h3 class="card-t"><span class="anno">4</span>의전 참고 사항</h3><p class="card-d">PCO 내부 전용 · 대리인·업체에게 보이지 않음</p></div>
+           <div class="card-c grid gap-2 text-sm">
+             <div><span class="text-xs text-muted-foreground">호칭</span><br>His Excellency Minister Nguyen</div>
+             <div><span class="text-xs text-muted-foreground">의전 선호</span><br>차량 뒷좌석 오른쪽, 녹차 선호</div>
+             <div><span class="text-xs text-muted-foreground">참가자 관계</span><br>필리핀 통상장관과 동석 회피 요청</div>
+             <div><span class="text-xs text-muted-foreground">행사 내 역할</span><br>세션 2 발표자 (15분)</div>
+             <div><span class="text-xs text-muted-foreground">내부 메모</span><br>9/20 비서실 통화: 입국 시 대사관 영접 동행 예정</div>
+           </div>
+         </section>
+       </aside>
+     </div>
+
+     <!-- 참가자 -->
+     <div class="dpane hidden" data-pane="pp">
+       <div class="card hidden overflow-x-auto @3xl:block">
+         <table class="tbl"><thead><tr><th>여권상 이름</th><th>호칭·표시 이름</th><th>유형</th><th>직함</th><th>성별</th><th>국적</th><th>생년월일</th><th>🔒 여권</th><th>🔒 건강·종교</th><th>연락처</th></tr></thead>
+         <tbody>
+           <tr class="cursor-pointer" data-sheet><td class="font-medium">NGUYEN HONG DIEN</td><td>H.E. Minister Nguyen</td><td>VIP</td><td>장관</td><td>남</td><td>베트남</td><td>1965.03.12</td><td>●●●●4821 · 2031.05</td><td>있음</td><td>+84 90 ●●● 1122</td></tr>
+           <tr class="cursor-pointer" data-sheet><td class="font-medium">NGUYEN THI MAI</td><td>Mrs. Nguyen</td><td>동반자 · 배우자</td><td>-</td><td>여</td><td>베트남</td><td>1968.07.02</td><td>●●●●1937 · 2029.11</td><td>없음</td><td>-</td></tr>
+           <tr class="cursor-pointer" data-sheet><td class="font-medium">TRAN VAN HAI</td><td>Mr. Tran</td><td>수행 · 보좌관</td><td>국장</td><td>남</td><td>베트남</td><td>1980.01.25</td><td>●●●●7710 · 2030.02</td><td>없음</td><td>+84 91 ●●● 4410</td></tr>
+           <tr class="cursor-pointer" data-sheet><td class="font-medium">LE QUOC BAO</td><td>Mr. Le</td><td>수행 · 경호</td><td>-</td><td>남</td><td>베트남</td><td>1988.11.30</td><td><span class="st-urgent">미입력</span></td><td class="text-muted-foreground">미입력</td><td>+84 93 ●●● 0087</td></tr>
+         </tbody></table>
+       </div>
+       <div class="grid gap-2 @3xl:hidden">
+         <button class="card grid gap-1 p-3 text-left" data-sheet><b>NGUYEN HONG DIEN</b><span class="text-xs text-muted-foreground">VIP · 장관 · 남 · 1965.03.12</span><span class="text-xs">여권 ●●●●4821 · 만료 2031.05</span></button>
+         <button class="card grid gap-1 p-3 text-left" data-sheet><b>NGUYEN THI MAI</b><span class="text-xs text-muted-foreground">동반자 · 배우자</span></button>
+         <button class="card grid gap-1 p-3 text-left" data-sheet><b>TRAN VAN HAI</b><span class="text-xs text-muted-foreground">보좌관 · 국장</span></button>
+         <button class="card urgent-edge grid gap-1 p-3 text-left" data-sheet><b>LE QUOC BAO</b><span class="text-xs text-destructive">여권 미입력</span></button>
+       </div>
+       <p class="pt-3 text-xs text-muted-foreground">행을 누르면 참가자 상세가 오른쪽 패널로 열립니다. 🔒 항목은 가려져 있고 [보기]를 눌러야 원본이 보이며 열람 기록이 남습니다.</p>
+     </div>
+
+     <!-- 서비스 -->
+     <div class="dpane hidden" data-pane="sv">
+       <div class="grid gap-3">
+         <section class="card"><div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t">항공 · H.E. Nguyen</h3><span class="st-done">확정</span></div></div>
+           <div class="card-c grid gap-3 @3xl:grid-cols-2">
+             <div class="rounded-md border p-3 text-sm"><div class="pb-1 text-xs text-muted-foreground">요청 (대리인)</div>하노이 → 서울 김포 · 10월 14일<br>서울 인천 → 호찌민 · 10월 18일</div>
+             <div class="rounded-md border p-3 text-sm"><div class="pb-1 text-xs text-muted-foreground">확정 (A여행사)</div>VN416 HAN 11:20 → GMP 19:30 · 비즈니스<br>VN409 ICN 10:45 → SGN 14:20 · 예약 X7K2LM</div>
+           </div></section>
+         <section class="card"><div class="card-h pb-3"><div class="flex items-center justify-between"><h3 class="card-t">수송 · 입국 픽업</h3><span class="st-action">변경 중</span></div></div>
+           <div class="card-c grid gap-3 @3xl:grid-cols-2">
+             <div class="rounded-md border p-3 text-sm"><div class="pb-1 text-xs text-muted-foreground">요청 (항공 확정으로 자동 생성)</div>김포공항 → 롯데호텔 · 19:30 도착 · 3명</div>
+             <div class="rounded-md border border-dashed p-3 text-sm text-muted-foreground"><div class="pb-1 text-xs">확정 (B운수)</div><span class="strike">12가3456 · 13:00 출발</span> · 재배차 대기</div>
+           </div></section>
+         <p class="text-xs text-muted-foreground">숙박·공항 의전·식이도 같은 형식 (요청 ↔ 확정 나란히)</p>
+       </div>
+     </div>
+
+     <!-- 일정 -->
+     <div class="dpane hidden" data-pane="pg">
+       <div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>일시</th><th>하위 행사</th><th>참석자</th><th>역할</th><th>상태</th></tr></thead><tbody>
+         <tr><td>10/14 18:00</td><td>환영 만찬</td><td>VIP, 배우자</td><td>참석</td><td><span class="st-action">판단 필요</span></td></tr>
+         <tr><td>10/15 10:00</td><td>본회의 1세션</td><td>VIP, 보좌관</td><td>참석</td><td><span class="st-done">확정</span></td></tr>
+         <tr><td>10/15 15:00</td><td>세션 2 · 무역 협력</td><td>VIP</td><td>발표자</td><td><span class="st-done">확정</span></td></tr>
+         <tr><td>10/16 09:30</td><td>한-베 통상장관 양자 면담 <span class="badge badge-outline ml-1">관계자 한정</span></td><td>VIP, 보좌관</td><td>참석</td><td><span class="st-wait">가안</span></td></tr>
+         <tr><td>10/16 14:00</td><td>동반자 문화 프로그램</td><td>배우자</td><td>참석</td><td><span class="st-done">확정</span></td></tr>
+       </tbody></table></div>
+     </div>
+
+     <!-- 변경 이슈 -->
+     <div class="dpane hidden" data-pane="is">
+       <div class="card overflow-hidden"><table class="tbl"><thead><tr><th>이슈</th><th>변경</th><th>진행</th><th>상태</th></tr></thead><tbody>
+         <tr class="go cursor-pointer" data-go="pco-e03"><td>CHG-042</td><td>도착 ICN 14:00 → GMP 19:30</td><td>3 / 6</td><td><span class="st-progress">진행중</span></td></tr>
+         <tr class="text-muted-foreground"><td>CHG-018</td><td>동반자 1명 추가 (배우자)</td><td>4 / 4</td><td><span class="st-done">종결 · 2시간 10분</span></td></tr>
+       </tbody></table></div>
+     </div>
+
+     <!-- 동의·문서 -->
+     <div class="dpane hidden" data-pane="dc">
+       <div class="grid gap-3 @3xl:grid-cols-2">
+         <section class="card"><div class="card-h pb-3"><h3 class="card-t">동의 기록</h3></div><div class="card-c grid gap-2 text-sm">
+           <div class="flex justify-between"><span>필수 · 민감 · 고유식별 (3명)</span><span class="text-xs text-muted-foreground">9/11 Pham Thu Ha · v2</span></div>
+           <div class="flex justify-between"><span>필수 · 민감 (Mr. Le)</span><span class="text-xs text-muted-foreground">9/18 Pham Thu Ha · v2</span></div>
+           <div class="flex justify-between text-destructive"><span>고유식별 (Mr. Le)</span><span class="text-xs">미동의</span></div></div></section>
+         <section class="card"><div class="card-h pb-3"><h3 class="card-t">문서</h3></div><div class="card-c grid gap-2 text-sm">
+           <div class="flex justify-between"><span>🔒 여권 사본 3건</span><button class="btn btn-outline btn-sm">열람 (사유 입력)</button></div>
+           <div class="flex justify-between"><span>일정표 v3 · 9월 21일 발행</span><span class="st-action">재발행 필요</span></div>
+           <div class="flex justify-between"><span>초청장 · 9월 10일</span><button class="btn btn-ghost btn-sm">보기</button></div></div></section>
+       </div>
+     </div>
+
+     <!-- 이력 -->
+     <div class="dpane hidden" data-pane="hs">
+       <div class="card"><div class="card-c grid gap-2 pt-6 text-sm">
+         <div class="grid grid-cols-[110px_1fr] gap-2"><span class="text-muted-foreground">오늘 09:12</span><span>도착지 변경 요청 (Pham Thu Ha) → CHG-042</span></div>
+         <div class="grid grid-cols-[110px_1fr] gap-2"><span class="text-muted-foreground">9/21 16:00</span><span>일정표 v3 발행 (김초청)</span></div>
+         <div class="grid grid-cols-[110px_1fr] gap-2"><span class="text-muted-foreground">9/19 11:20</span><span>대표단 확정 (김초청)</span></div>
+         <div class="grid grid-cols-[110px_1fr] gap-2"><span class="text-muted-foreground">9/18 22:05</span><span>경호원 Mr. Le 추가 (Pham Thu Ha)</span></div>
+         <div class="grid grid-cols-[110px_1fr] gap-2"><span class="text-muted-foreground">9/10 10:00</span><span>초청 발송</span></div>
+       </div></div>
+     </div>
+   </div>
+  </div>
+ </div>
+
+ <!-- 참가자 상세 Sheet -->
+ <div id="sheet-pp" class="dlg absolute inset-0 z-30 hidden bg-black/60">
+  <div class="absolute inset-y-0 right-0 flex w-full max-w-md flex-col gap-4 overflow-y-auto border-l bg-background p-6 shadow-lg">
+    <div class="flex items-start justify-between gap-2"><div class="grid gap-1"><h3 class="text-lg font-semibold">H.E. Nguyen Hong Dien</h3><p class="text-sm text-muted-foreground">VIP · 장관 · 베트남 산업통상부</p></div><button class="btn btn-ghost btn-sm h-8 w-8 px-0" data-close aria-label="닫기">✕</button></div>
+    <section class="grid gap-2 text-sm"><h4 class="font-semibold">기본 정보</h4>
+      <div class="grid grid-cols-2 gap-2"><div><span class="text-xs text-muted-foreground">여권상 이름</span><br>NGUYEN HONG DIEN</div><div><span class="text-xs text-muted-foreground">호칭</span><br>H.E.</div><div><span class="text-xs text-muted-foreground">성별 · 생년월일</span><br>남 · 1965.03.12</div><div><span class="text-xs text-muted-foreground">국적</span><br>베트남</div><div><span class="text-xs text-muted-foreground">개인 의전 등급</span><br>B (대표단 기본값)</div><div><span class="text-xs text-muted-foreground">연락처</span><br>+84 90 ●●● 1122</div></div></section>
+    <section class="grid gap-2 rounded-md border p-3 text-sm"><div class="flex items-center justify-between"><h4 class="font-semibold">🔒 여권</h4><button class="btn btn-outline btn-sm">보기</button></div>
+      <div class="grid grid-cols-2 gap-2"><div><span class="text-xs text-muted-foreground">번호</span><br>●●●●●4821</div><div><span class="text-xs text-muted-foreground">만료</span><br>2031년 5월</div></div>
+      <p class="text-[11px] text-muted-foreground">원본을 보면 열람 기록이 남습니다</p></section>
+    <section class="grid gap-2 rounded-md border p-3 text-sm"><div class="flex items-center justify-between"><h4 class="font-semibold">🔒 건강·종교·접근성</h4><button class="btn btn-outline btn-sm">보기</button></div>
+      <div>의료 사항 있음 · 알레르기 있음 · 이동 보조 없음</div>
+      <label class="flex items-center gap-2 text-xs"><span class="switch h-4 w-7"><span class="h-3 w-3 translate-x-3"></span></span>의료 사항 현장 공유</label></section>
+    <section class="grid gap-2 text-sm"><h4 class="font-semibold">서비스</h4>
+      <div class="flex justify-between"><span>항공 · 지원</span><span class="st-done">확정</span></div><div class="flex justify-between"><span>숙박 · 지원</span><span class="st-done">확정</span></div><div class="flex justify-between"><span>수송</span><span class="st-action">변경 중</span></div><div class="flex justify-between"><span>식이</span><span class="st-done">할랄</span></div></section>
+    <div class="mt-auto flex justify-end gap-2 border-t pt-4"><button class="btn btn-outline">지원 예외 지정</button><button class="btn btn-default">정보 수정</button></div>
+  </div>
+ </div>
+</section>
+
+
+<!-- ========== PX-03 대리인 홈 ========== -->
+<section class="screen" id="px-03" data-code="PX-03">
+ <div class="mx-auto flex min-h-[792px] max-w-[760px] flex-col text-base">
+  <div class="flex items-center gap-3 border-b px-4 py-3 @3xl:px-6"><span class="font-semibold" data-ko="한-아프리카 정상회의 2026">Korea-Africa Summit 2026</span><button type="button" class="btn btn-outline btn-sm ml-auto" data-langtoggle>🌐 <span data-ko="한국어">English</span></button><span class="anno">1</span></div>
+  <div class="grid gap-4 p-4 @3xl:p-6">
+    <div>
+      <div class="text-lg font-semibold" data-ko="응우옌 장관 대표단">Delegation of H.E. Minister Nguyen</div>
+      <div class="text-sm text-muted-foreground"><span data-ko="마감: 2026년 10월 15일 · 9일 남음">Deadline: 15 Oct 2026 · 9 days left</span> · <a href="#px-03" class="underline underline-offset-4" data-ko="대표단 전환">Switch delegation</a></div>
+    </div>
+    <div class="card border-primary border-2 grid gap-3 p-5">
+      <span class="text-sm text-muted-foreground"><span class="anno">2</span><span data-ko="다음 할 일">Next step</span></span>
+      <span class="text-lg font-semibold" data-ko="경호원 1명의 여권 정보 입력">Add passport details for 1 person</span>
+      <button class="btn btn-default w-fit" data-ko="계속하기">Continue</button>
+    </div>
+    <div class="card grid gap-3 p-5">
+      <div class="flex items-baseline justify-between"><span class="font-semibold"><span class="anno">3</span><span data-ko="필수 항목">Required items</span></span><span class="text-sm text-muted-foreground" data-ko="7개 남음">7 left</span></div>
+      <div class="text-2xl font-bold">38 / 45</div>
+      <div class="progress"><i style="width:84%"></i></div>
+      <a href="#px-03" class="btn btn-ghost btn-sm w-fit -ml-2" data-ko="다음 빈 항목으로">Go to next empty item</a>
+    </div>
+    <div class="grid gap-2">
+      <div class="flex items-baseline justify-between"><h3 class="font-semibold"><span class="anno">4</span><span data-ko="체크리스트">Checklist</span></h3><span class="text-sm text-muted-foreground" data-ko="9개 중 6개 완료">6 of 9 done</span></div>
+      <div class="card overflow-hidden">
+        <a href="#px-03" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">✓</span><span class="flex-1" data-ko="개인정보 동의">Consent</span></a>
+        <a href="#px-03" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">✓</span><span class="flex-1" data-ko="참석 회신 · 참석">Attendance · Attending</span></a>
+        <a href="#px-03" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full border-2 border-destructive text-xs font-bold text-destructive">!</span><span class="flex-1"><span data-ko="참가자 (4명)">Participants (4)</span><br><span class="text-sm text-muted-foreground" data-ko="Mr. Le 여권 정보">Passport details for Mr. Le</span></span><span class="st-urgent" data-ko="2개 남음">2 left</span></a>
+        <a href="#px-08" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full border-2 border-destructive text-xs font-bold text-destructive">!</span><span class="flex-1"><span data-ko="항공">Flights</span><br><span class="text-sm text-muted-foreground" data-ko="확정 2 · 준비 중 1 · 자비 항공편 입력 필요 1">2 confirmed · 1 in progress · 1 self-paid to enter</span></span><span class="st-urgent" data-ko="1개 남음">1 left</span></a>
+        <a href="#px-03" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">✓</span><span class="flex-1" data-ko="숙박 · 확정">Hotel · Confirmed</span></a>
+        <a href="#px-03" class="flex items-center gap-3 border-b px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full border-2 border-dashed border-muted-foreground text-xs">·</span><span class="flex-1"><span data-ko="일정">Programs</span><br><span class="text-sm text-muted-foreground" data-ko="초청 2건 회신 필요">2 invitations to answer</span></span><span class="st-action" data-ko="2개 남음">2 left</span></a>
+        <a href="#px-03" class="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"><span class="grid h-6 w-6 place-items-center rounded-full border-2 border-destructive text-xs font-bold text-destructive">!</span><span class="flex-1" data-ko="식이·특별 요청">Dietary &amp; special needs</span><span class="st-urgent" data-ko="2개 남음">2 left</span></a>
+      </div>
+    </div>
+    <div class="card flex flex-wrap items-center justify-between gap-3 p-5"><span><b data-ko="내 일정표">Your itinerary</b><br><span class="text-sm text-muted-foreground" data-ko="오늘 업데이트됨">Updated today</span></span><button class="btn btn-outline" data-ko="보기">View</button></div>
+  </div>
+ </div>
+</section>
+
+<!-- ========== PX-08 대리인 항공 ========== -->
+<section class="screen" id="px-08" data-code="PX-08">
+ <div class="mx-auto flex min-h-[792px] max-w-[760px] flex-col text-base">
+  <div class="flex items-center gap-3 border-b px-4 py-3 @3xl:px-6"><a href="#px-03" class="btn btn-ghost btn-sm -ml-2" data-ko="← 체크리스트">← Checklist</a><span class="font-semibold" data-ko="항공">Flights</span><button type="button" class="btn btn-outline btn-sm ml-auto" data-langtoggle>🌐 <span data-ko="한국어">English</span></button></div>
+  <div class="grid gap-4 p-4 @3xl:p-6">
+    <div class="alert text-muted-foreground"><span class="anno">1</span><span data-ko="지원 항공은 출발·도착 도시만 알려주시면 항공권을 준비해 드립니다. 자비 항공은 직접 예약 후 공항 픽업을 위해 항공편을 입력해 주세요.">Supported flights: tell us your cities and dates, and we'll book the tickets. Self-paid flights: book them yourself, then enter the flight so we can arrange airport pickup.</span></div>
+
+    <div class="card grid gap-3 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2"><b>H.E. Nguyen</b><span class="flex gap-1.5"><span class="badge badge-outline" data-ko="지원">Supported</span><span class="st-done" data-ko="확정">Confirmed</span></span></div>
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg bg-muted p-4">
+        <div><div class="text-xl font-bold">HAN</div><div class="text-xs text-muted-foreground">14 Oct 2026 · 11:20 ICT</div></div>
+        <div class="text-xs text-muted-foreground">VN416 →</div>
+        <div class="text-right"><div class="text-xl font-bold">GMP</div><div class="text-xs text-muted-foreground">19:30 KST</div></div>
+      </div>
+      <div class="text-sm text-muted-foreground"><span data-ko="예약번호">Booking ref.</span> X7K2LM · <span data-ko="귀국">Return</span> 18 Oct · ICN → SGN</div>
+      <div><span class="anno">2</span><button class="btn btn-outline" data-ko="변경 요청">Request a change</button></div>
+    </div>
+
+    <div class="card grid gap-3 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2"><b>Mrs. Nguyen</b><span class="flex gap-1.5"><span class="badge badge-outline" data-ko="지원">Supported</span><span class="st-progress" data-ko="준비 중">In progress</span></span></div>
+      <p class="text-sm" data-ko="항공권을 준비하고 있습니다. 확정되면 알려드립니다.">We're arranging this ticket. We'll let you know when it's confirmed.</p>
+      <div class="text-sm text-muted-foreground"><span data-ko="요청 내용">Your request</span>: Hanoi → Seoul (ICN) · 14 Oct / Seoul → Ho Chi Minh City · 18 Oct</div>
+      <button class="btn btn-outline w-fit" data-ko="요청 수정">Edit request</button>
+    </div>
+
+    <div class="card urgent-edge grid gap-4 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2"><b>Mr. Le</b><span class="flex gap-1.5"><span class="anno">3</span><span class="badge badge-outline" data-ko="자비">Self-paid</span><span class="st-urgent" data-ko="필수 입력">Required</span></span></div>
+      <p class="text-sm text-muted-foreground" data-ko="이 참가자의 항공권은 지원되지 않습니다. 동반자 1인까지 지원됩니다.">Flights for this person are not covered. The event covers flights for up to 1 companion.</p>
+      <div class="grid gap-3 @xl:grid-cols-2">
+        <div class="grid gap-2"><span class="label"><span data-ko="편명">Flight number</span> *</span><div class="input border-destructive">e.g. VN416</div><span class="text-xs text-destructive" data-ko="필수 항목입니다">This field is required</span></div>
+        <div class="grid gap-2"><span class="label"><span data-ko="도착 공항">Arrival airport</span> *</span><div class="input">Search airport</div></div>
+        <div class="grid gap-2"><span class="label"><span data-ko="도착 일시 (현지)">Arrival date &amp; time (local)</span> *</span><div class="input">14 Oct 2026 · 19:30 KST</div></div>
+        <div class="grid gap-2"><span class="label"><span data-ko="귀국 편명">Return flight</span> *</span><div class="input">e.g. VN417</div></div>
+      </div>
+      <span class="text-xs text-muted-foreground" data-ko="저장됨 · 방금">Saved · just now</span>
+    </div>
+    <p class="text-sm text-muted-foreground"><span class="anno">4</span><span data-ko="Mr. Tran(자비, 입력 완료) 카드는 접혀 있습니다.">Mr. Tran (self-paid, entered) is collapsed.</span></p>
+  </div>
+ </div>
+</section>
+
+<!-- ========== VD-03 업체 통합 할 일 ========== -->
+<section class="screen" id="vd-03" data-code="VD-03">
+ <div class="flex min-h-[792px] flex-col">
+  <div class="flex flex-wrap items-center gap-4 border-b px-4 py-3 @3xl:px-6"><b>B운수</b>
+    <nav class="tabs"><a href="#vd-03" class="tab tab-on">통합 할 일 <span class="badge badge-destructive ml-1.5 px-1.5 py-0">5</span></a><a href="#vd-03" class="tab">내 프로젝트</a></nav>
+    <button class="btn btn-outline btn-sm ml-auto">프로젝트: 전체</button></div>
+  <div class="grid gap-4 p-4 @3xl:p-6">
+    <div class="text-sm text-muted-foreground"><span class="anno">1</span>조치 필요 5 · 처리중 3 · 예정 4</div>
+    <div class="card hidden overflow-hidden @3xl:block">
+      <table class="tbl">
+        <thead><tr><th>기한</th><th><span class="anno">2</span>프로젝트 (PCO)</th><th>대표단</th><th>할 일</th><th></th></tr></thead>
+        <tbody>
+          <tr class="go urgent-edge cursor-pointer" data-go="vd-07"><td><span class="st-urgent">3시간</span></td><td>한-아프리카 정상회의<div class="text-xs text-muted-foreground">○○PCO</div></td><td>베트남 장관</td><td>픽업 재배차 · 도착 <span class="strike">14:00</span> → 19:30</td><td><button class="btn btn-default btn-sm">확인</button></td></tr>
+          <tr class="go urgent-edge cursor-pointer" data-go="vd-07"><td><span class="st-urgent">⛔ 중지</span></td><td>한-아프리카 정상회의<div class="text-xs text-muted-foreground">○○PCO</div></td><td>가나 장관</td><td class="font-semibold text-destructive">작업 중지 · 요청 취소됨</td><td><button class="btn btn-destructive btn-sm">확인</button></td></tr>
+          <tr class="go cursor-pointer" data-go="vd-07"><td><span class="st-action">1일</span></td><td>서울 바이오포럼<div class="text-xs text-muted-foreground">△△컨벤션</div></td><td>독일 장관</td><td>신규 공항 픽업</td><td><button class="btn btn-default btn-sm">확인</button></td></tr>
+          <tr class="go cursor-pointer" data-go="vd-07"><td><span class="st-action">2일</span></td><td>한-아프리카 정상회의<div class="text-xs text-muted-foreground">○○PCO</div></td><td>세네갈 총리</td><td>탑승 인원 2 → 3</td><td><button class="btn btn-default btn-sm">확인</button></td></tr>
+          <tr class="text-muted-foreground"><td><span class="st-wait">예정</span></td><td>한-아프리카 정상회의<div class="text-xs">○○PCO</div></td><td>가나 장관</td><td><span class="anno">3</span>만찬 후 이동 · 상위 결정 대기</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid gap-2 @3xl:hidden">
+      <a href="#vd-07" class="card urgent-edge grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-urgent">3시간</span><span class="text-xs text-muted-foreground">○○PCO</span></div><b>픽업 재배차 · 베트남 장관</b><span class="text-xs">도착 <span class="strike">14:00</span> → 19:30</span></a>
+      <a href="#vd-07" class="card urgent-edge grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-urgent">⛔ 작업 중지</span><span class="text-xs text-muted-foreground">○○PCO</span></div><b>가나 장관 · 요청 취소됨</b></a>
+      <a href="#vd-07" class="card grid gap-1.5 p-3"><div class="flex justify-between"><span class="st-action">1일</span><span class="text-xs text-muted-foreground">△△컨벤션</span></div><b>신규 공항 픽업 · 독일 장관</b></a>
+      <div class="card grid gap-1.5 p-3 text-muted-foreground"><span class="st-wait w-fit">예정</span><b>만찬 후 이동 · 가나 장관</b></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ========== VD-07 조정 항목 처리 ========== -->
+<section class="screen" id="vd-07" data-code="VD-07">
+ <div class="flex min-h-[792px] flex-col">
+  <div class="flex flex-wrap items-center gap-3 border-b px-4 py-3 @3xl:px-6"><a href="#vd-03" class="btn btn-ghost btn-sm -ml-2">← 통합 할 일</a><b>픽업 재배차</b><span class="st-urgent">기한 오늘 18:00</span></div>
+  <div class="mx-auto grid w-full max-w-[960px] gap-4 p-4 @3xl:p-6">
+    <div class="text-sm text-muted-foreground">한-아프리카 정상회의 (○○PCO) · 베트남 장관 대표단 · 입국 픽업</div>
+    <section class="card">
+      <div class="card-h pb-3"><h3 class="card-t"><span class="anno">1</span>무엇이 바뀌었나요</h3></div>
+      <div class="card-c grid gap-2">
+        <div class="flex flex-wrap items-center gap-2"><span class="w-20 text-muted-foreground">도착 공항</span><span class="strike">인천 ICN</span><span>→</span><b>김포 GMP</b></div>
+        <div class="flex flex-wrap items-center gap-2"><span class="w-20 text-muted-foreground">도착 시각</span><span class="strike">14:00 KST</span><span>→</span><b>19:30 KST</b></div>
+        <div class="flex flex-wrap items-center gap-2"><span class="w-20 text-muted-foreground">탑승 인원</span><span>3명 (변동 없음)</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-h pb-3"><h3 class="card-t">현재 배차 (변경 전)</h3><p class="card-d">의전 세단 · 12가3456 · 홍기사 · 13:00 출발</p></div>
+    </section>
+    <div class="flex flex-wrap items-center gap-3"><span class="anno">2</span><button class="btn btn-default">확인했습니다</button><span class="text-xs text-muted-foreground">누르면 PCO 화면에 "처리중"으로 표시됩니다</span></div>
+    <section class="card opacity-60">
+      <div class="card-h pb-3"><h3 class="card-t">새 배차 입력</h3><p class="card-d">확인 후 활성화됩니다</p></div>
+      <div class="card-c grid gap-3">
+        <div class="grid gap-3 @3xl:grid-cols-3">
+          <div class="grid gap-2"><span class="label">출발 시각 *</span><div class="input">18:30</div></div>
+          <div class="grid gap-2"><span class="label">차량 *</span><div class="input">차량 선택</div></div>
+          <div class="grid gap-2"><span class="label">기사 *</span><div class="input">기사 선택</div></div>
+        </div>
+        <button class="btn btn-default w-fit" disabled>반영 완료</button>
+      </div>
+    </section>
+    <div class="alert grid gap-2 border-2 border-destructive text-destructive"><b><span class="anno">3</span>⛔ 무효 상태 예시 — 이 요청은 취소되었습니다</b><span class="text-sm">진행 중이던 작업을 멈춰주세요. 새 요청이 따로 도착합니다.</span><button class="btn btn-destructive w-fit">작업 중지 확인</button></div>
+  </div>
+ </div>
+</section>
+
+    </div>
+  </div>
+
+  <aside id="review" class="card w-[330px] max-w-full p-5" aria-live="polite"></aside>
+</main>
+
+<script>
+const SCREENS=[
+  {id:"pco-t01",label:"PCO-T01 행사 목록"},{id:"pco-e01",label:"PCO-E01 홈"},{id:"pco-e02",label:"PCO-E02 이슈 보드"},{id:"pco-e03",label:"PCO-E03 이슈 상세"},
+  {id:"pco-e05",label:"PCO-E05 대표단 360"},{id:"px-03",label:"PX-03 대리인 홈"},{id:"px-08",label:"PX-08 대리인 항공"},{id:"vd-03",label:"VD-03·07 업체"}
+];
+const REVIEW={
+ "pco-t01":{t:"행사 목록 (첫 화면)",pts:[["F0-1","'내 담당만' 기본 켜짐. 관리자는 끄면 회사 전체 행사"],["F0-2","새 행사: 상단 버튼 + 목록 끝 빈 카드. 누르면 만들기 창 (빈 행사 / 기존 설정 복사)"],["F0-3","카드: 상태·D-day·국/영문 이름·기간·장소·주최·대표단 확정률·긴급/미종결/미응답. ⋯ 메뉴에 열기·수정·복사·취소·삭제"],["F0-4","삭제는 '준비 중' 행사만 (세 번째 카드 ⋯ → 삭제). 초청 시작 후엔 '행사 취소'로 대체"]]},
+ "pco-e01":{t:"행사 홈",pts:[["F1-1","'내 담당만' 스위치를 상단 고정. 기본값 켜짐"],["F1-2","'지금 처리할 일'이 스크롤 없이 보이는가. 숫자 카드 4개 + 긴급 목록 3줄"],["F1-3","두 번째 줄 '초청 진행'. 반송 건은 빨간 글자"],["F1-4","72시간 일정. 행사 기간엔 '오늘 타임라인'으로 교체 예정"],["F1-5","서비스 진행 막대 5개 (Progress 컴포넌트)"]]},
+ "pco-e02":{t:"변경 이슈 보드",pts:[["F2-1","필터: 미종결·서비스·업체·내 담당만"],["F2-2","긴급도 열에 남은 시간 직접 표기"],["F2-3","'막힌 곳' 열. 내 판단이면 굵게"],["F2-4","모바일은 카드. 긴급 카드는 왼쪽 빨간 선"]]},
+ "pco-e03":{t:"변경 이슈 상세",pts:[["F3-1","최상단에 최초 변경 '이전 → 이후' 고정"],["F3-2","차수 배지 + 들여쓰기 트리. 모바일은 들여쓰기 1단"],["F3-3","판단 항목: 결정 근거, 경고, 선택지별 다음 연쇄 (RadioGroup)"],["F3-4","이슈 단위 행동 3개. 강제 종결은 빨간 글자"]]},
+ "pco-e05":{t:"대표단 360",pts:[["F4-1","헤더: 상태·등급·완결률·구성원·진행 이슈 + 대표단 정보 수정"],["F4-2","필수 누락 알림을 탭 위에 고정"],["F4-3","개요 탭 = 대표단 전체 정보: 기본 정보·초청 진행·구성원·서비스 현황 + 오른쪽에 대리인·동의·의전 참고. 탭 7개 모두 눌러보세요"],["F4-4","의전 참고 사항(호칭·선호·관계·역할·메모)은 PCO 전용. 참가자 행을 누르면 상세 패널 (🔒 가림 + 보기)"]]},
+ "px-03":{t:"대리인 홈",pts:[["F5-1","언어 전환 버튼. 눌러서 한국어/영어 전환해 보세요"],["F5-2","'다음 할 일' 하나를 가장 크게"],["F5-3","필수 항목 진행률과 남은 개수, 다음 빈 항목 바로가기"],["F5-4","체크리스트 항목마다 남은 필수 개수. 항공을 누르면 PX-08"]]},
+ "px-08":{t:"대리인 항공",pts:[["F6-1","상단 안내로 지원/자비 차이를 먼저 설명"],["F6-2","지원·확정: 항공편 카드 + 변경 요청"],["F6-3","자비: 항공편 직접 입력. 빈 필수 칸은 빨간 테두리 + 안내 문구"],["F6-4","완료된 참가자 카드는 접기"]]},
+ "vd-03":{t:"업체 통합 할 일 · 처리",pts:[["F7-1","여러 PCO의 할 일을 긴급순 한 목록으로"],["F7-2","프로젝트와 PCO 이름 함께 표기"],["F7-3","'예정' 항목은 흐리게, 버튼 없음. 행을 누르면 처리 화면"],["F7-4","처리: 변경 전/후 → 확인 → 새 값 입력 → 반영 완료. 무효는 빨간 경고"]]}
+};
+REVIEW["vd-07"]=REVIEW["vd-03"];
+const frame=document.getElementById('frame'),picker=document.getElementById('picker'),review=document.getElementById('review');
+
+SCREENS.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s.label;b.dataset.id=s.id;b.className='btn btn-sm btn-ghost';b.setAttribute('role','tab');b.onclick=()=>{location.hash=s.id};picker.appendChild(b)});
+
+const NAV=[["home","홈","pco-e01",""],["issues","변경 이슈","pco-e02","7"],["delegations","대표단","pco-e05",""],["services","서비스 현황","pco-e01",""],["programs","일정","pco-e01",""]];
+document.querySelectorAll('.pco').forEach(p=>{
+  const a=p.dataset.active, tenant=p.dataset.level==='tenant';
+  p.className='pco grid min-h-[792px] grid-rows-[1fr_auto] @3xl:grid-cols-[224px_1fr] @3xl:grid-rows-1';
+  const side=document.createElement('nav');
+  side.className='hidden @3xl:flex flex-col gap-0.5 border-r bg-muted/40 p-3';side.setAttribute('aria-label','행사 메뉴');
+  const item=(n)=>`<a href="#${n[2]}" class="flex items-center justify-between rounded-md px-3 py-2 text-sm ${n[0]===a?'bg-background font-semibold shadow-sm':'text-muted-foreground hover:bg-background hover:text-foreground'}" ${n[0]===a?'aria-current="page"':''}><span>${n[1]}</span>${n[3]?`<span class="badge badge-destructive px-1.5 py-0">${n[3]}</span>`:''}</a>`;
+  if(tenant){
+    side.innerHTML=`<div class="px-3 pb-3 pt-1 text-sm font-semibold">서비스명 <span class="block text-xs font-normal text-muted-foreground">○○PCO</span></div>
+     ${[["events","행사 목록","pco-t01",""],["x","업체","pco-t01",""],["x","템플릿","pco-t01",""],["x","팀","pco-t01",""],["x","회사 설정","pco-t01",""]].map(item).join('')}`;
+  } else
+  side.innerHTML=`<a href="#pco-t01" class="px-3 pb-2 pt-1 text-xs text-muted-foreground hover:text-foreground">← 행사 목록</a>
+   <button class="btn btn-outline btn-sm mb-3 justify-between"><span class="truncate">한-아프리카 정상회의 2026</span><span>⌄</span></button>
+   ${NAV.map(item).join('')}
+   <div class="px-3 pb-1 pt-4 text-xs text-muted-foreground">커뮤니케이션</div>
+   ${item(["x","초청 발송","pco-e01",""])}${item(["x","일정표 발행","pco-e01",""])}${item(["x","주최측 요청","pco-e01",""])}
+   <div class="px-3 pb-1 pt-4 text-xs text-muted-foreground">관리</div>
+   ${item(["x","행사 설정","pco-e01",""])}${item(["x","종료·정산","pco-e01",""])}`;
+  p.insertBefore(side,p.firstChild);
+  const tab=document.createElement('nav');
+  tab.className='sticky bottom-0 grid grid-cols-5 border-t bg-background px-1 pb-2 pt-1.5 @3xl:hidden';tab.setAttribute('aria-label','하단 메뉴');
+  const T= tenant ? [["events","행사","pco-t01","▤"],["x","업체","pco-t01","◎"],["x","템플릿","pco-t01","▣"],["x","팀","pco-t01","☺"],["x","더보기","pco-t01","…"]]
+    : [["home","홈","pco-e01","⌂"],["issues","이슈","pco-e02","7"],["delegations","대표단","pco-e05","☰"],["programs","일정","pco-e01","▦"],["more","행사 목록","pco-t01","↩"]];
+  tab.innerHTML=T.map(t=>`<a href="#${t[2]}" class="grid justify-items-center gap-0.5 text-[11px] ${t[0]===a?'font-semibold text-foreground':'text-muted-foreground'}" ${t[0]===a?'aria-current="page"':''}><span class="grid h-6 w-6 place-items-center rounded-md ${t[0]==='issues'?'bg-destructive text-destructive-foreground text-[10px] font-bold':'border text-xs'}">${t[3]}</span>${t[1]}</a>`).join('');
+  p.appendChild(tab);
+});
+document.querySelectorAll('tr.go').forEach(tr=>tr.addEventListener('click',()=>{location.hash=tr.dataset.go}));
+
+function show(){
+  let id=(location.hash||'#pco-t01').slice(1);
+  if(!document.getElementById(id)||!document.getElementById(id).classList.contains('screen')) id='pco-t01';
+  closeAll();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
+  const pid=id==='vd-07'?'vd-03':id;
+  picker.querySelectorAll('button').forEach(b=>{const on=b.dataset.id===pid;b.className='btn btn-sm '+(on?'btn-default':'btn-ghost');b.setAttribute('aria-selected',on)});
+  const r=REVIEW[id],sc=document.getElementById(id);
+  review.innerHTML=`<div class="grid gap-1 pb-4"><h2 class="card-t">검수 포인트 · ${r.t}</h2><p class="card-d">${sc.dataset.code} · 화면 속 검은 번호와 대응</p></div>
+   <ol class="grid gap-3">${r.pts.map((p,i)=>`<li class="grid grid-cols-[28px_1fr] gap-2 text-sm"><span class="anno m-0">${i+1}</span><span><span class="text-xs text-muted-foreground">${p[0]}</span><br>${p[1]}</span></li>`).join('')}</ol>
+   <div class="mt-5 grid gap-2 border-t pt-4 text-xs text-muted-foreground"><b class="text-foreground">상태 표기 (shadcn Badge 기본 변형)</b>
+    <div class="flex items-center gap-2"><span class="st-urgent">긴급</span>destructive</div>
+    <div class="flex items-center gap-2"><span class="st-action">조치 필요</span>default</div>
+    <div class="flex items-center gap-2"><span class="st-progress">처리중</span>outline + 점선</div>
+    <div class="flex items-center gap-2"><span class="st-done">완료</span>secondary</div>
+    <div class="flex items-center gap-2"><span class="st-wait">대기</span>outline + 흐린 글자</div>
+    <div class="flex items-center gap-2"><span class="st-void">무효</span>outline + 취소선</div></div>
+   <p class="mt-4 text-xs text-muted-foreground">shadcn 기본 테마에는 빨강(destructive) 외 상태 색이 없어, 나머지 상태는 모양으로 구분했습니다. 상태별 색은 ④ 테마 단계에서 추가합니다. 피드백은 "F3-2 …"처럼 번호로 주세요.</p>`;
+  frame.scrollTop=0;
+}
+addEventListener('hashchange',show);
+function setDev(d){
+  frame.classList.toggle('desktop',d==='desktop');frame.classList.toggle('mobile',d==='mobile');
+  document.querySelectorAll('[data-dev]').forEach(b=>b.classList.toggle('tab-on',b.dataset.dev===d));
+  try{localStorage.setItem('fm2-dev',d)}catch(e){}
+}
+document.querySelectorAll('[data-dev]').forEach(b=>b.addEventListener('click',()=>setDev(b.dataset.dev)));
+let sv=null;try{sv=localStorage.getItem('fm2-dev')}catch(e){}
+setDev(sv||(innerWidth<900?'mobile':'desktop'));
+document.getElementById('annoToggle').addEventListener('change',e=>frame.classList.toggle('show-anno',e.target.checked));
+let lang='en';
+document.querySelectorAll('[data-ko]').forEach(el=>{el.dataset.en=el.innerHTML});
+document.querySelectorAll('[data-langtoggle]').forEach(b=>b.addEventListener('click',()=>{lang=lang==='en'?'ko':'en';document.querySelectorAll('[data-ko]').forEach(el=>{el.innerHTML=lang==='ko'?el.dataset.ko:el.dataset.en})}));
+/* 드롭다운 메뉴 */
+function closeMenus(){document.querySelectorAll('.menu').forEach(m=>m.classList.add('hidden'))}
+document.querySelectorAll('[data-menu]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const m=document.getElementById(b.dataset.menu);const was=m.classList.contains('hidden');closeMenus();if(was)m.classList.remove('hidden')}));
+document.addEventListener('click',closeMenus);
+/* 다이얼로그·시트 */
+function closeAll(){document.querySelectorAll('.dlg').forEach(d=>d.classList.add('hidden'));closeMenus()}
+function openDlg(id){closeAll();frame.scrollTop=0;document.getElementById(id).classList.remove('hidden')}
+document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openDlg(b.dataset.open)}));
+document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>openDlg('sheet-pp')));
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeAll));
+document.querySelectorAll('.dlg').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)closeAll()}));
+addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
+/* 대표단 360 탭 */
+function dtab(k){document.querySelectorAll('[data-dtab]').forEach(t=>t.classList.toggle('tab-on',t.dataset.dtab===k));document.querySelectorAll('.dpane').forEach(p=>p.classList.toggle('hidden',p.dataset.pane!==k))}
+document.querySelectorAll('[data-dtab]').forEach(t=>t.addEventListener('click',()=>dtab(t.dataset.dtab)));
+document.querySelectorAll('[data-dtab-go]').forEach(t=>t.addEventListener('click',()=>dtab(t.dataset.dtabGo)));
+show();
+</script>
+</body>
+</html>

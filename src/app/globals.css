@@ -1,0 +1,179 @@
+/*
+ * VIP 초청자 관리 솔루션 — 테마 T1 "프로토콜 네이비" (D-UI-12)
+ * shadcn/ui + Tailwind CSS v4 형식. Next.js 프로젝트의 app/globals.css 로 사용합니다.
+ * 색은 모두 CSS 변수(토큰)로만 쓰고, 컴포넌트에 색상 값을 직접 쓰지 않습니다.
+ * 다크 모드 값은 정의만 해 두고 MVP에서는 켜지 않습니다 (UD-12).
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.375rem;
+
+  /* 기본 (shadcn 토큰) */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222 47% 11%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+  --primary: hsl(215 55% 24%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(214 32% 95%);
+  --secondary-foreground: hsl(222 47% 15%);
+  --muted: hsl(214 30% 96%);
+  --muted-foreground: hsl(215 16% 42%);
+  --accent: hsl(214 40% 94%);
+  --accent-foreground: hsl(215 55% 22%);
+  --destructive: hsl(0 72% 50%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(214 25% 88%);
+  --input: hsl(214 25% 85%);
+  --ring: hsl(215 55% 30%);
+
+  /* 사이드바 (shadcn Sidebar 컴포넌트) */
+  --sidebar: hsl(214 30% 97%);
+  --sidebar-foreground: hsl(222 47% 11%);
+  --sidebar-primary: hsl(215 55% 24%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(0 0% 100%);
+  --sidebar-accent-foreground: hsl(222 47% 11%);
+  --sidebar-border: hsl(214 25% 88%);
+  --sidebar-ring: hsl(215 55% 30%);
+
+  /* 상태 색 (UD-05). strong = 점·선·진한 배지, bg/fg = 옅은 배지 */
+  --status-urgent: hsl(0 72% 51%);
+  --status-urgent-bg: hsl(0 86% 96%);
+  --status-urgent-fg: hsl(0 72% 40%);
+  --status-action: hsl(32 95% 44%);
+  --status-action-bg: hsl(38 92% 92%);
+  --status-action-fg: hsl(26 90% 32%);
+  --status-progress: hsl(217 91% 55%);
+  --status-progress-bg: hsl(214 95% 94%);
+  --status-progress-fg: hsl(221 70% 40%);
+  --status-done: hsl(142 64% 38%);
+  --status-done-bg: hsl(142 60% 92%);
+  --status-done-fg: hsl(142 64% 24%);
+  --status-wait: hsl(240 4% 62%);
+  --status-wait-bg: hsl(240 5% 95%);
+  --status-wait-fg: hsl(240 4% 40%);
+
+  /* VIP 강조 */
+  --vip: hsl(38 70% 42%);
+}
+
+.dark {
+  --background: hsl(222 40% 8%);
+  --foreground: hsl(210 30% 96%);
+  --card: hsl(222 38% 11%);
+  --card-foreground: hsl(210 30% 96%);
+  --popover: hsl(222 38% 11%);
+  --popover-foreground: hsl(210 30% 96%);
+  --primary: hsl(212 70% 70%);
+  --primary-foreground: hsl(222 47% 11%);
+  --secondary: hsl(220 30% 17%);
+  --secondary-foreground: hsl(210 30% 96%);
+  --muted: hsl(220 30% 15%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(220 30% 18%);
+  --accent-foreground: hsl(210 30% 96%);
+  --destructive: hsl(0 62% 45%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(220 25% 20%);
+  --input: hsl(220 25% 22%);
+  --ring: hsl(212 70% 70%);
+
+  --sidebar: hsl(222 40% 10%);
+  --sidebar-foreground: hsl(210 30% 96%);
+  --sidebar-primary: hsl(212 70% 70%);
+  --sidebar-primary-foreground: hsl(222 47% 11%);
+  --sidebar-accent: hsl(220 30% 18%);
+  --sidebar-accent-foreground: hsl(210 30% 96%);
+  --sidebar-border: hsl(220 25% 20%);
+  --sidebar-ring: hsl(212 70% 70%);
+
+  --status-urgent: hsl(0 80% 60%);
+  --status-urgent-bg: hsl(0 60% 18%);
+  --status-urgent-fg: hsl(0 90% 80%);
+  --status-action: hsl(38 92% 55%);
+  --status-action-bg: hsl(32 60% 16%);
+  --status-action-fg: hsl(38 92% 70%);
+  --status-progress: hsl(217 91% 60%);
+  --status-progress-bg: hsl(217 50% 18%);
+  --status-progress-fg: hsl(213 94% 78%);
+  --status-done: hsl(142 60% 45%);
+  --status-done-bg: hsl(142 45% 14%);
+  --status-done-fg: hsl(142 70% 70%);
+  --status-wait: hsl(240 5% 50%);
+  --status-wait-bg: hsl(240 4% 18%);
+  --status-wait-fg: hsl(240 5% 70%);
+
+  --vip: hsl(40 80% 60%);
+}
+
+@theme inline {
+  --font-sans: "IBM Plex Sans KR", "Noto Sans JP", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-status-urgent: var(--status-urgent);
+  --color-status-urgent-bg: var(--status-urgent-bg);
+  --color-status-urgent-fg: var(--status-urgent-fg);
+  --color-status-action: var(--status-action);
+  --color-status-action-bg: var(--status-action-bg);
+  --color-status-action-fg: var(--status-action-fg);
+  --color-status-progress: var(--status-progress);
+  --color-status-progress-bg: var(--status-progress-bg);
+  --color-status-progress-fg: var(--status-progress-fg);
+  --color-status-done: var(--status-done);
+  --color-status-done-bg: var(--status-done-bg);
+  --color-status-done-fg: var(--status-done-fg);
+  --color-status-wait: var(--status-wait);
+  --color-status-wait-bg: var(--status-wait-bg);
+  --color-status-wait-fg: var(--status-wait-fg);
+  --color-vip: var(--vip);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 14px; /* 운영 도구 기본 (UD-10). 대리인 포털 레이아웃에서 16px로 올림 */
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "common": {
+    "brand": "Invitee Management Solution",
+    "logout": "Log out",
+    "language_ko": "한국어",
+    "language_en": "English"
+  },
+  "nav": {
+    "checklist": "Checklist",
+    "flight": "Flight",
+    "schedule": "Schedule",
+    "messages": "Messages"
+  }
+}

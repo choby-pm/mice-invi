@@ -29,49 +29,16 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { StatusBadge, type StatusBadgeStatus } from "@/components/shared/status-badge";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { BlankScreen } from "@/components/shared/blank-screen";
 import { createServiceItem, deleteServiceItem } from "@/server/modules/service-item/actions";
 import { formatDateTime } from "@/lib/date";
-
-const SERVICE_TYPES = [
-  { value: "FLIGHT", label: "항공" },
-  { value: "LODGING", label: "숙박" },
-  { value: "TRANSFER", label: "수송" },
-  { value: "AIRPORT", label: "공항 의전" },
-  { value: "DIETARY", label: "식음" },
-] as const;
-
-const SUPPORT_TYPE_LABEL: Record<string, string> = {
-  SUPPORTED: "지원",
-  SELF_BOOKED: "자비·직접 예약",
-  PREPAID_REIMBURSE: "선결제 후 환급",
-  SELF_PAID_ARRANGED: "자비·예약 대행",
-  NOT_PROVIDED: "제공 안 함",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "요청 전",
-  REQUESTED: "요청됨",
-  IN_PROGRESS: "처리중",
-  CONFIRMED: "확정",
-  NOTIFIED: "안내 완료",
-  CHANGING: "변경 처리중",
-  CANCEL_REQ: "취소 요청",
-  CANCELLED: "취소 완료",
-  NOT_APPLICABLE: "해당 없음",
-};
-const STATUS_BADGE: Record<string, StatusBadgeStatus> = {
-  DRAFT: "wait",
-  REQUESTED: "wait",
-  IN_PROGRESS: "progress",
-  CONFIRMED: "done",
-  NOTIFIED: "done",
-  CHANGING: "action",
-  CANCEL_REQ: "urgent",
-  CANCELLED: "void",
-  NOT_APPLICABLE: "void",
-};
+import {
+  SERVICE_TYPES,
+  SUPPORT_TYPE_LABEL,
+  SERVICE_STATUS_LABEL as STATUS_LABEL,
+  SERVICE_STATUS_BADGE as STATUS_BADGE,
+} from "@/lib/service-item-constants";
 
 interface ServiceItemRow {
   id: string;
@@ -215,6 +182,9 @@ function ServiceTypeTable({
                     <form action={deleteServiceItem}>
                       <input type="hidden" name="id" value={item.id} />
                       <input type="hidden" name="eventId" value={eventId} />
+                      {item.delegation?.id && (
+                        <input type="hidden" name="delegationId" value={item.delegation.id} />
+                      )}
                       <Button type="submit" variant="ghost" size="icon-sm">
                         <X className="size-4" />
                       </Button>
@@ -251,7 +221,7 @@ export function ServiceBoard({
 }) {
   return (
     <Tabs defaultValue="FLIGHT">
-      <TabsList>
+      <TabsList className="sticky top-0 z-10 -mx-6 w-[calc(100%+3rem)] justify-start rounded-none border-b bg-background px-6">
         {SERVICE_TYPES.map((t) => (
           <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
         ))}

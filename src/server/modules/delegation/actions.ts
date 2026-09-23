@@ -23,7 +23,9 @@ export async function createDelegation(formData: FormData) {
     organization,
     owner_user_id: membership.userId,
   });
+  // DB 트리거가 5개 서비스 유형에 기본 항목을 자동으로 만들어 주므로 그 화면도 갱신합니다.
   revalidatePath(`/console/events/${eventId}/delegations`);
+  revalidatePath(`/console/events/${eventId}/services`);
 }
 
 export async function updateDelegation(formData: FormData) {

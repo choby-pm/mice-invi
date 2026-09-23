@@ -31,7 +31,9 @@ export async function createServiceItem(formData: FormData) {
     scheduled_at: scheduledAt,
     status: eventVendorId ? "REQUESTED" : "DRAFT",
   });
+  // 대표단 상세 화면도 같은 service_item을 보여주므로 같이 최신화합니다 (한 데이터, 두 화면).
   revalidatePath(`/console/events/${eventId}/services`);
+  revalidatePath(`/console/events/${eventId}/delegations/${delegationId}`);
 }
 
 // DRAFT 상태일 때만 지울 수 있습니다 — 실제로 업체에 넘어간 뒤의 "취소"는
@@ -39,9 +41,11 @@ export async function createServiceItem(formData: FormData) {
 export async function deleteServiceItem(formData: FormData) {
   const id = formData.get("id") as string;
   const eventId = formData.get("eventId") as string;
+  const delegationId = formData.get("delegationId") as string | null;
   if (!id) return;
 
   const supabase = await createServerSupabaseClient();
   await supabase.from("service_item").delete().eq("id", id).eq("status", "DRAFT");
   revalidatePath(`/console/events/${eventId}/services`);
+  if (delegationId) revalidatePath(`/console/events/${eventId}/delegations/${delegationId}`);
 }

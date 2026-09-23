@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { mockLogout } from "@/server/auth/mock-login";
+import { vendorLogout } from "@/server/modules/iam/vendor-auth-actions";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 const NAV = [
   { href: "/vendor", label: "통합 할 일" },
@@ -8,7 +9,10 @@ const NAV = [
   { href: "/vendor/account", label: "내 정보" },
 ];
 
-export default function VendorLayout({ children }: { children: React.ReactNode }) {
+export default async function VendorLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="flex h-14 items-center justify-between border-b px-4">
@@ -22,9 +26,12 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             ))}
           </nav>
         </div>
-        <form action={mockLogout}>
-          <Button type="submit" variant="ghost" size="sm">로그아웃</Button>
-        </form>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">{user?.email}</span>
+          <form action={vendorLogout}>
+            <Button type="submit" variant="ghost" size="sm">로그아웃</Button>
+          </form>
+        </div>
       </header>
       <main className="flex-1 p-6">{children}</main>
     </div>

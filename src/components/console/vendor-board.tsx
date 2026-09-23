@@ -51,6 +51,10 @@ function AddVendorDialog({ eventId, open, onOpenChange }: { eventId: string; ope
               <Label htmlFor="vendorName">업체명</Label>
               <Input id="vendorName" name="vendorName" placeholder="예: 대한항공 MICE팀" required autoFocus />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="contactEmail">담당자 이메일 (선택)</Label>
+              <Input id="contactEmail" name="contactEmail" type="email" placeholder="입력하면 업체 포털 로그인 초청 메일이 갑니다" />
+            </div>
             <div className="flex flex-col gap-2">
               <Label>담당 분야 (여러 개 선택 가능)</Label>
               {SERVICE_TYPES.map((t) => (
@@ -71,7 +75,15 @@ function AddVendorDialog({ eventId, open, onOpenChange }: { eventId: string; ope
   );
 }
 
-export function VendorBoard({ eventId, eventVendors }: { eventId: string; eventVendors: EventVendorRow[] }) {
+export function VendorBoard({
+  eventId,
+  eventVendors,
+  taskCountByVendor,
+}: {
+  eventId: string;
+  eventVendors: EventVendorRow[];
+  taskCountByVendor: Record<string, number>;
+}) {
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -101,7 +113,7 @@ export function VendorBoard({ eventId, eventVendors }: { eventId: string; eventV
                       <div>
                         <p className="text-sm font-medium">{ev.vendor?.name}</p>
                         <StatusBadge status="wait" className="mt-1">
-                          업무 현황 0건 (R3에서 연결)
+                          배정된 항목 {taskCountByVendor[ev.id] ?? 0}건
                         </StatusBadge>
                       </div>
                       <form action={removeEventVendor}>

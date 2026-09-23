@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentMembership } from "@/server/modules/org/get-membership";
+import { getSiteUrl } from "@/lib/site-url";
 
 export async function addEventVendor(formData: FormData) {
   const eventId = formData.get("eventId") as string;
   const vendorName = (formData.get("vendorName") as string)?.trim();
+  const contactEmail = (formData.get("contactEmail") as string)?.trim();
   const serviceTypes = formData.getAll("serviceTypes") as string[];
   if (!eventId || !vendorName || serviceTypes.length === 0) return;
 
@@ -36,6 +39,30 @@ export async function addEventVendor(formData: FormData) {
     vendor_id: vendorId,
     service_types: serviceTypes,
   });
+
+  // 담당자 이메일을 입력했으면 그 업체의 로그인 계정으로 초청 (플랫폼에 이미 있으면 바로 배정)
+  if (contactEmail) {
+    const admin = createAdminClient();
+    const { data: existingList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    const existingUser = existingList.users.find((u) => u.email?.toLowerCase() === contactEmail.toLowerCase());
+
+    let userId: string;
+    if (existingUser) {
+      userId = existingUser.id;
+    } else {
+      const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(contactEmail, {
+        redirectTo: `${getSiteUrl()}/vendor-accept-invite`,
+      });
+      if (error || !invited.user) {
+        revalidatePath(`/console/events/${eventId}/vendors`);
+        return;
+      }
+      userId = invited.user.id;
+    }
+
+    await admin.from("vendor_member").insert({ vendor_id: vendorId, user_id: userId, role: "ADMIN" }).select();
+  }
+
   revalidatePath(`/console/events/${eventId}/vendors`);
 }
 

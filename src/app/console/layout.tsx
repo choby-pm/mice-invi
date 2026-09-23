@@ -1,10 +1,6 @@
 import Link from "next/link";
 import {
   CalendarRange,
-  AlertTriangle,
-  Users,
-  Table2,
-  Building2,
   Settings,
   LogOut,
   History,
@@ -28,12 +24,10 @@ import { Button } from "@/components/ui/button";
 import { logOutPco } from "@/server/modules/iam/auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
+// 대표단·변경 이슈·전체 명단·업체는 특정 행사에 속하므로 사이드바가 아니라
+// 행사 홈(/console/events/[id])에 진입한 뒤 탭으로 이동합니다.
 const NAV = [
   { href: "/console", label: "행사 목록", icon: CalendarRange },
-  { href: "/console/issues", label: "변경 이슈", icon: AlertTriangle },
-  { href: "/console/delegations", label: "대표단", icon: Users },
-  { href: "/console/roster", label: "전체 명단", icon: Table2 },
-  { href: "/console/vendors", label: "업체", icon: Building2 },
   { href: "/console/audit", label: "활동 기록", icon: History },
   { href: "/console/team", label: "팀 관리", icon: UserPlus },
   { href: "/console/settings", label: "설정", icon: Settings },

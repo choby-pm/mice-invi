@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MoreVertical, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,10 +98,10 @@ function EventCard({ event }: { event: EventRow }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2">
-        <div>
-          <CardTitle className="text-base">{event.name}</CardTitle>
+        <Link href={`/console/events/${event.id}`}>
+          <CardTitle className="text-base hover:underline">{event.name}</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">{formatDate(event.created_at, "ko")} 생성</p>
-        </div>
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
             <MoreVertical className="size-4" />

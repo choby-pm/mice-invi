@@ -57,6 +57,7 @@
 | 2 | 2026-09-23 | R0-3 | "이제 구축 및 검수 단계로 넘어가자. 순서는 구축 > 검수 및 안정화 > 배포(CI/CD) > 추가 구축. 로그인은 최대한 간단하게 임의로 진행" | R0-3 저장소 구조 확정, R0-4~R0-6 구축: Next.js+TS+Tailwind v4+shadcn(base-nova/base-ui) 프로젝트 생성, T1 토큰 적용(IBM Plex Sans KR), shadcn 부품 16종+StatusBadge 설치(부품 견본 `/dev/components`), console/vendor/portal/admin 4개 화면 뼈대(host는 MVP 제외라 보류)와 `mock_role` 쿠키 기반 임시 로그인(`/login`) 구현, `next dev` -p 3000으로 로컬 확인 가능. 다음은 검수 및 안정화 |
 | 3 | 2026-09-23 | R0-7 | "다음 단계 구축 진행해줘" | R0-7 다국어·시간대 기반 구축: `src/i18n/messages/{ko,en}.json` 메시지 파일 + `getMessages()` 로더로 교체(대리인 포털만 다국어, 02 §1.13 범위 표대로), `src/lib/date.ts`에 `formatDate`(월을 글자로)·`formatDateTime`(시간대 표기) 유틸 추가, `/dev/components`에 날짜 표기 견본 섹션 추가. 다음은 R0-8(DB·환경) — Supabase 프로젝트 생성이 필요해 의뢰인 확인 요청 |
 | 4 | 2026-09-23 | R0-8 | 의뢰인이 Supabase 프로젝트 URL·publishable key·secret key 전달 | `.env.local`(커밋 제외)에 저장, `.env.local.example` 템플릿 작성. `src/lib/supabase/{client,server,admin}.ts` 3종 클라이언트 작성(브라우저용, 로그인 세션용, RLS 우회 관리자용 — admin은 `server-only`로 봉인). `/admin/db-check`에서 실제 연결 확인(연결됨). 검증·운영 환경은 R0-9 배포 시점에 별도 Supabase 프로젝트로 분리 예정 |
+| 5 | 2026-09-23 | R0-9 | "C1 통과, GitHub·Vercel 가입했어" | 프로젝트 전용 git 저장소 초기화(홈 폴더의 기존 저장소와 무관, D-SY-13), GitHub `choby-pm/mice-invi`(private) 생성·최초 커밋 push, Vercel 프로젝트 연결(GitHub 자동 배포 연동) + Supabase 환경변수 3종 등록, 첫 배포 성공 → **https://miceinvi.vercel.app** 라이브 확인(로그인 보호·DB 연결 모두 정상). 이제부터 `main`에 push하면 자동 배포. R0 목표("빈 화면이 인터넷 주소로 열림") 달성 |
 
 ### 06 UI 의사결정
 

@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   History,
+  UserPlus,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const NAV = [
   { href: "/console/roster", label: "전체 명단", icon: Table2 },
   { href: "/console/vendors", label: "업체", icon: Building2 },
   { href: "/console/audit", label: "활동 기록", icon: History },
+  { href: "/console/team", label: "팀 관리", icon: UserPlus },
   { href: "/console/settings", label: "설정", icon: Settings },
 ];
 

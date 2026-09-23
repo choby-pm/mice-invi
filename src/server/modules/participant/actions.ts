@@ -31,5 +31,7 @@ export async function createParticipant(formData: FormData) {
     honorific,
     title,
   });
+  // 첫 입력 저장 (S02: OPENED --> IN_PROGRESS)
+  await supabase.from("delegation").update({ invite_status: "IN_PROGRESS" }).eq("id", delegationId).eq("invite_status", "OPENED");
   if (revalidateTo) revalidatePath(revalidateTo);
 }

@@ -48,14 +48,16 @@ interface ParticipantRow {
   participant_type: string;
 }
 
+// PCO 콘솔·대리인 포털 양쪽에서 씁니다. revalidateTo는 저장 후 새로고침할
+// 정확한 경로(호출한 화면 자신)입니다.
 function AddParticipantDialog({
-  eventId,
   delegationId,
+  revalidateTo,
   open,
   onOpenChange,
 }: {
-  eventId: string;
   delegationId: string;
+  revalidateTo: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
@@ -66,8 +68,8 @@ function AddParticipantDialog({
           <DialogHeader>
             <DialogTitle>참가자 추가</DialogTitle>
           </DialogHeader>
-          <input type="hidden" name="eventId" value={eventId} />
           <input type="hidden" name="delegationId" value={delegationId} />
+          <input type="hidden" name="revalidateTo" value={revalidateTo} />
           <div className="flex flex-col gap-3 py-4">
             <div className="flex flex-col gap-1.5">
               <Label>참가자 유형</Label>
@@ -116,14 +118,12 @@ function AddParticipantDialog({
 }
 
 function SensitiveInfoSheet({
-  eventId,
-  delegationId,
+  revalidateTo,
   participant,
   open,
   onOpenChange,
 }: {
-  eventId: string;
-  delegationId: string;
+  revalidateTo: string;
   participant: ParticipantRow;
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -179,8 +179,7 @@ function SensitiveInfoSheet({
           ) : (
             <form action={saveParticipantSensitive} className="flex flex-col gap-3 pt-2">
               <input type="hidden" name="participantId" value={participant.id} />
-              <input type="hidden" name="eventId" value={eventId} />
-              <input type="hidden" name="delegationId" value={delegationId} />
+              <input type="hidden" name="revalidateTo" value={revalidateTo} />
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="passportNo">여권번호</Label>
@@ -223,12 +222,10 @@ function SensitiveInfoSheet({
 }
 
 function ParticipantRowItem({
-  eventId,
-  delegationId,
+  revalidateTo,
   participant,
 }: {
-  eventId: string;
-  delegationId: string;
+  revalidateTo: string;
   participant: ParticipantRow;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -241,8 +238,7 @@ function ParticipantRowItem({
         🔒 민감정보
       </Button>
       <SensitiveInfoSheet
-        eventId={eventId}
-        delegationId={delegationId}
+        revalidateTo={revalidateTo}
         participant={participant}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
@@ -252,12 +248,12 @@ function ParticipantRowItem({
 }
 
 export function ParticipantList({
-  eventId,
   delegationId,
+  revalidateTo,
   participants,
 }: {
-  eventId: string;
   delegationId: string;
+  revalidateTo: string;
   participants: ParticipantRow[];
 }) {
   const [addOpen, setAddOpen] = useState(false);
@@ -278,11 +274,11 @@ export function ParticipantList({
       ) : (
         <ul className="divide-y rounded-lg border">
           {participants.map((p) => (
-            <ParticipantRowItem key={p.id} eventId={eventId} delegationId={delegationId} participant={p} />
+            <ParticipantRowItem key={p.id} revalidateTo={revalidateTo} participant={p} />
           ))}
         </ul>
       )}
-      <AddParticipantDialog eventId={eventId} delegationId={delegationId} open={addOpen} onOpenChange={setAddOpen} />
+      <AddParticipantDialog delegationId={delegationId} revalidateTo={revalidateTo} open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }

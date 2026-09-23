@@ -93,7 +93,11 @@ export default async function DelegationDetailPage({
         </CardContent>
       </Card>
 
-      <ParticipantList eventId={eventId} delegationId={delegationId} participants={participants ?? []} />
+      <ParticipantList
+        delegationId={delegationId}
+        revalidateTo={`/console/events/${eventId}/delegations/${delegationId}`}
+        participants={participants ?? []}
+      />
     </div>
   );
 }

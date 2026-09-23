@@ -24,8 +24,7 @@ export async function viewParticipantSensitive(participantId: string): Promise<P
 
 export async function saveParticipantSensitive(formData: FormData) {
   const participantId = formData.get("participantId") as string;
-  const eventId = formData.get("eventId") as string;
-  const delegationId = formData.get("delegationId") as string;
+  const revalidateTo = formData.get("revalidateTo") as string;
   if (!participantId) return;
 
   const supabase = await createServerSupabaseClient();
@@ -39,5 +38,5 @@ export async function saveParticipantSensitive(formData: FormData) {
     p_mobility_need: (formData.get("mobilityNeed") as string) || null,
     p_religion: (formData.get("religion") as string) || null,
   });
-  revalidatePath(`/console/events/${eventId}/delegations/${delegationId}`);
+  if (revalidateTo) revalidatePath(revalidateTo);
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { BlankScreen } from "@/components/shared/blank-screen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,15 +27,16 @@ export default async function PortalHomePage() {
           event: { name: string } | null;
         };
         return (
-          <Card key={i}>
-            <CardHeader>
-              <CardTitle className="text-base">{delegation.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {delegation.event?.name} · {delegation.organization}
-              <p className="mt-1 text-xs">체크리스트 입력 화면은 다음 조각에서 연결합니다.</p>
-            </CardContent>
-          </Card>
+          <Link key={i} href={`/portal/delegation/${delegation.id}`}>
+            <Card className="hover:bg-muted/50">
+              <CardHeader>
+                <CardTitle className="text-base">{delegation.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                {delegation.event?.name} · {delegation.organization}
+              </CardContent>
+            </Card>
+          </Link>
         );
       })}
     </div>

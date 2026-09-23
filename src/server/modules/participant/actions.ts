@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
-import { getCurrentMembership } from "@/server/modules/org/get-membership";
 
+// PCO 콘솔과 대리인 포털 양쪽에서 씁니다 — 권한 판단은 RLS(participant_insert:
+// PCO 관리자·담당자 또는 is_active_proxy)에 맡기고, 여기서는 역할을 따로 가리지
+// 않습니다. revalidateTo로 호출한 화면을 각자 새로고침합니다.
 export async function createParticipant(formData: FormData) {
-  const eventId = formData.get("eventId") as string;
   const delegationId = formData.get("delegationId") as string;
+  const revalidateTo = formData.get("revalidateTo") as string;
   const participantType = formData.get("participantType") as string;
   const lastName = (formData.get("lastName") as string)?.trim();
   const firstName = (formData.get("firstName") as string)?.trim();
@@ -15,13 +17,12 @@ export async function createParticipant(formData: FormData) {
   const title = (formData.get("title") as string)?.trim() || null;
   if (!delegationId || !participantType || !lastName || !firstName || !nationality) return;
 
-  const membership = await getCurrentMembership();
-  // PCO(관리자·담당자) 또는 그 대표단에 배정된 대리인만 (01 §2.5 매트릭스: 참가자 CRUD(범위))
-  if (!membership || membership.role === "PCO_FIELD") return;
-
   const supabase = await createServerSupabaseClient();
+  const { data: delegation } = await supabase.from("delegation").select("tenant_id").eq("id", delegationId).single();
+  if (!delegation) return; // RLS로 안 보이면 여기서 걸러짐
+
   await supabase.from("participant").insert({
-    tenant_id: membership.tenantId,
+    tenant_id: delegation.tenant_id,
     delegation_id: delegationId,
     participant_type: participantType,
     last_name: lastName,
@@ -30,5 +31,5 @@ export async function createParticipant(formData: FormData) {
     honorific,
     title,
   });
-  revalidatePath(`/console/events/${eventId}/delegations/${delegationId}`);
+  if (revalidateTo) revalidatePath(revalidateTo);
 }

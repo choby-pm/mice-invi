@@ -59,6 +59,12 @@
 | 4 | 2026-09-23 | R0-8 | 의뢰인이 Supabase 프로젝트 URL·publishable key·secret key 전달 | `.env.local`(커밋 제외)에 저장, `.env.local.example` 템플릿 작성. `src/lib/supabase/{client,server,admin}.ts` 3종 클라이언트 작성(브라우저용, 로그인 세션용, RLS 우회 관리자용 — admin은 `server-only`로 봉인). `/admin/db-check`에서 실제 연결 확인(연결됨). 검증·운영 환경은 R0-9 배포 시점에 별도 Supabase 프로젝트로 분리 예정 |
 | 5 | 2026-09-23 | R0-9 | "C1 통과, GitHub·Vercel 가입했어" | 프로젝트 전용 git 저장소 초기화(홈 폴더의 기존 저장소와 무관, D-SY-13), GitHub `choby-pm/mice-invi`(private) 생성·최초 커밋 push, Vercel 프로젝트 연결(GitHub 자동 배포 연동) + Supabase 환경변수 3종 등록, 첫 배포 성공 → **https://miceinvi.vercel.app** 라이브 확인(로그인 보호·DB 연결 모두 정상). 이제부터 `main`에 push하면 자동 배포. R0 목표("빈 화면이 인터넷 주소로 열림") 달성 |
 
+### R1 기반
+
+| 회차 | 일자 | 버전 | 피드백 요약 | 반영 내용 |
+|---|---|---|---|---|
+| 1 | 2026-09-23 | R1-a | "C1·C2 통과, R1 진행해줘" | 04 §2.4/08 §5.3 규칙대로 가장 위험한 권한·테넌트 격리부터 테스트 먼저 작성: `supabase/migrations/0001_r1_foundation.sql`(tenant/tenant_member/event/audit_log + RLS), `tests/iam-tenant-isolation.test.ts`(Vitest, 4개 시나리오). 로컬에서는 스키마 미적용 상태로 "테이블 없음" 오류까지 확인(테스트 배선 자체는 정상). 의뢰인이 SQL을 Supabase 대시보드에 적용하면 테스트 통과 화면을 검수 요청할 예정 |
+
 ### 06 UI 의사결정
 
 | 회차 | 일자 | 버전 | 피드백 요약 | 반영 내용 |

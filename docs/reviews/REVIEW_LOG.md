@@ -64,6 +64,7 @@
 | 회차 | 일자 | 버전 | 피드백 요약 | 반영 내용 |
 |---|---|---|---|---|
 | 1 | 2026-09-23 | R1-a | "C1·C2 통과, R1 진행해줘" | 04 §2.4/08 §5.3 규칙대로 가장 위험한 권한·테넌트 격리부터 테스트 먼저 작성: `supabase/migrations/0001_r1_foundation.sql`(tenant/tenant_member/event/audit_log + RLS), `tests/iam-tenant-isolation.test.ts`(Vitest, 4개 시나리오). 로컬에서는 스키마 미적용 상태로 "테이블 없음" 오류까지 확인(테스트 배선 자체는 정상). 의뢰인이 SQL을 Supabase 대시보드에 적용하면 테스트 통과 화면을 검수 요청할 예정 |
+| 2 | 2026-09-23 | R1-b | "SQL 실행했어" | 테스트 4개 전부 통과 확인. PCO 콘솔 실제 로그인 구현: `/console-signup`·`/console-login`(이메일+비밀번호), `proxy.ts`가 `/console`만 실제 Supabase 세션 검사로 전환(다른 구역은 아직 mock). curl로 가입→세션 유지→로그아웃→재접근 차단 전체 흐름 실제 확인. 배포 중 `@types/node` 버전 충돌로 Vercel 빌드가 실패해 원인 수정(버전 상향) 후 재배포 성공, 라이브 사이트에서도 확인 |
 
 ### 06 UI 의사결정
 

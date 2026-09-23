@@ -6,7 +6,15 @@ MICE 행사 해외 VIP 초청자 관리 SaaS. PCO(테넌트) → 행사 → 대�
 
 ## 현재 상태
 
-설계·디자인 단계 완료. **트랙 B 개발 시작 (R0 개발 준비)**. 첫 세션이면 `docs/08_claude_code_handoff.md` §7부터.
+R0 완료(저장소·배포·DB·기본 부품·화면 뼈대). **R1 기반 진행 중.**
+
+- 완료: 테넌트/이벤트/감사로그 스키마+RLS(`supabase/migrations/0001`), 권한·테넌트 격리 자동 테스트(`tests/`, 전부 통과), PCO 콘솔 실제 로그인(`/console-signup`, `/console-login`, D-SY-10), 행사 목록 CRUD 화면(`/console`), 감사 로그 화면(`/console/audit`, `supabase/migrations/0002` 트리거로 자동 기록)
+- 진행 전: **직원·업체 초대, 메일 발송(Resend) 연동** — R1 기반의 남은 항목
+- vendor/portal/admin 3개 구역은 아직 `mock_role` 쿠키 임시 로그인. 각 모듈 차례에 실제 인증으로 교체 예정
+- 상세 이력: `docs/reviews/REVIEW_LOG.md`(R0, R1 기반 절 최신 회차), `docs/decisions/DECISION_LOG.md`(D-SY-08~13)
+- 라이브 주소: https://miceinvi.vercel.app · 저장소: github.com/choby-pm/mice-invi (private) · `main` push마다 자동 배포
+
+다음 세션 시작 문장 예시: **"인수인계서 기준으로 다음 작업(직원·업체 초대) 진행해줘. 끝나면 검수 요청해줘"**
 
 ## 반드시 먼저 읽을 것
 

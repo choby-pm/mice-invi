@@ -1,16 +1,16 @@
 import { notFound } from "next/navigation";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BlankScreen } from "@/components/shared/blank-screen";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SERVICE_TYPES, SERVICE_STATUS_LABEL, SERVICE_STATUS_BADGE } from "@/lib/service-item-constants";
+import { ParticipantList } from "@/components/console/participant-list";
 
 export default async function DelegationDetailPage({
   params,
 }: {
   params: Promise<{ id: string; delegationId: string }>;
 }) {
-  const { delegationId } = await params;
+  const { id: eventId, delegationId } = await params;
   const supabase = await createServerSupabaseClient();
   const { data: delegation } = await supabase
     .from("delegation")
@@ -69,17 +69,7 @@ export default async function DelegationDetailPage({
         </CardContent>
       </Card>
 
-      {!participants || participants.length === 0 ? (
-        <BlankScreen title="참가자가 아직 없습니다" note="참가자 추가 화면은 다음 조각(🔒 민감정보 이후)에서 만듭니다." />
-      ) : (
-        <ul className="divide-y rounded-lg border">
-          {participants.map((p) => (
-            <li key={p.id} className="px-4 py-2 text-sm">
-              {p.last_name} {p.first_name} · {p.participant_type}
-            </li>
-          ))}
-        </ul>
-      )}
+      <ParticipantList eventId={eventId} delegationId={delegationId} participants={participants ?? []} />
     </div>
   );
 }

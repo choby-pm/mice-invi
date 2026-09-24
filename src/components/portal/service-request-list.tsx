@@ -175,6 +175,9 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
   const submitted = item.status !== "DRAFT";
   const isFlight = item.service_type === "FLIGHT";
   const isLodging = item.service_type === "LODGING";
+  // 수송은 대리인이 요청하지 않고 항공 확정 결과로 시스템이 자동 생성합니다(P08) — 그래서
+  // 편집 버튼 없이 확정 결과만 보여줍니다.
+  const isTransfer = item.service_type === "TRANSFER";
   const flightRequest = firstOrNull(item.flight_request);
   const lodgingRequest = firstOrNull(item.lodging_request);
 
@@ -185,7 +188,11 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
         <StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge>
       </CardHeader>
       <CardContent className="space-y-3">
-        {!open ? (
+        {isTransfer ? (
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {item.note ?? "항공편이 확정되면 자동으로 생성됩니다."}
+          </p>
+        ) : !open ? (
           <div className="space-y-2">
             {item.note && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.note}</p>}
             <Button variant="outline" size="sm" onClick={() => setOpen(true)}>

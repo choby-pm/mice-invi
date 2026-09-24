@@ -118,7 +118,11 @@ export async function saveFlightSegments(formData: FormData) {
       });
     });
   }
-  if (rows.length > 0) await supabase.from("flight_segment").insert(rows);
+  let insertedRows: { id: string; direction: string; seq: number }[] = [];
+  if (rows.length > 0) {
+    const { data } = await supabase.from("flight_segment").insert(rows).select("id, direction, seq");
+    insertedRows = data ?? [];
+  }
 
   const finalArrival = byDirection.INBOUND.at(-1);
   const firstDeparture = byDirection.OUTBOUND[0];
@@ -133,6 +137,31 @@ export async function saveFlightSegments(formData: FormData) {
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
     .eq("id", serviceItemId);
+
+  // 입국 최종 도착 구간·귀국 첫 출발 구간이 확정되면 수송 요청을 자동 생성/갱신합니다(P08).
+  // 대리인은 수송을 요청하지 않으므로 여기서만 만들어집니다 — 04 §"IR-02" 재확정 시 갱신도 이 함수가 처리.
+  if (finalArrival) {
+    const segId = insertedRows.find((r) => r.direction === "INBOUND" && r.seq === byDirection.INBOUND.length)?.id ?? null;
+    await supabase.rpc("generate_transfer_request", {
+      p_flight_service_item_id: serviceItemId,
+      p_direction: "INBOUND",
+      p_from_text: finalArrival.arrAirport || "공항",
+      p_to_text: "숙소",
+      p_scheduled_at: new Date(finalArrival.arrAt).toISOString(),
+      p_source_flight_segment_id: segId,
+    });
+  }
+  if (firstDeparture) {
+    const segId = insertedRows.find((r) => r.direction === "OUTBOUND" && r.seq === 1)?.id ?? null;
+    await supabase.rpc("generate_transfer_request", {
+      p_flight_service_item_id: serviceItemId,
+      p_direction: "OUTBOUND",
+      p_from_text: "숙소",
+      p_to_text: firstDeparture.depAirport || "공항",
+      p_scheduled_at: new Date(firstDeparture.depAt).toISOString(),
+      p_source_flight_segment_id: segId,
+    });
+  }
 
   revalidatePath("/vendor");
 }

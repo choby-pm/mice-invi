@@ -33,6 +33,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { startServiceItem, confirmServiceItem } from "@/server/modules/service-item/vendor-actions";
 import { saveFlightSegments } from "@/server/modules/service-item/flight-actions";
 import { saveRoomAssignments } from "@/server/modules/service-item/lodging-actions";
+import { saveVehicleDispatches } from "@/server/modules/service-item/transfer-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   SERVICE_TYPES,
@@ -92,6 +93,27 @@ interface ParticipantOption {
   participant_type: string;
 }
 
+interface TransferRequestRow {
+  direction: "INBOUND" | "OUTBOUND";
+  from_text: string;
+  to_text: string;
+  scheduled_at: string | null;
+  participant_ids: string[];
+  luggage_note: string | null;
+}
+
+interface VehicleDispatchRow {
+  from_text: string | null;
+  to_text: string | null;
+  depart_at: string | null;
+  vehicle_class: string | null;
+  plate_no: string | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  participant_ids: string[];
+  luggage_note: string | null;
+}
+
 export interface VendorTaskRow {
   id: string;
   service_type: string;
@@ -104,6 +126,8 @@ export interface VendorTaskRow {
   flight_segment?: FlightSegmentRow[] | null;
   lodging_request?: LodgingRequestRow | LodgingRequestRow[] | null;
   room_assignment?: RoomAssignmentRow[] | null;
+  transfer_request?: TransferRequestRow | TransferRequestRow[] | null;
+  vehicle_dispatch?: VehicleDispatchRow[] | null;
 }
 
 const SERVICE_TYPE_LABEL = Object.fromEntries(SERVICE_TYPES.map((t) => [t.value, t.label]));
@@ -470,6 +494,182 @@ function LodgingConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: (
   );
 }
 
+interface VehicleDraft {
+  key: string;
+  fromText: string;
+  toText: string;
+  departAt: string;
+  vehicleClass: string;
+  plateNo: string;
+  driverName: string;
+  driverPhone: string;
+  participantIds: string[];
+  luggageNote: string;
+}
+
+function toVehicleDraft(row: VehicleDispatchRow, key: string): VehicleDraft {
+  return {
+    key,
+    fromText: row.from_text ?? "",
+    toText: row.to_text ?? "",
+    departAt: row.depart_at ? row.depart_at.slice(0, 16) : "",
+    vehicleClass: row.vehicle_class ?? "",
+    plateNo: row.plate_no ?? "",
+    driverName: row.driver_name ?? "",
+    driverPhone: row.driver_phone ?? "",
+    participantIds: row.participant_ids ?? [],
+    luggageNote: row.luggage_note ?? "",
+  };
+}
+
+function emptyVehicleDraft(transferRequest: TransferRequestRow | null): VehicleDraft {
+  return {
+    key: `vehicle-${Math.random().toString(36).slice(2)}`,
+    fromText: transferRequest?.from_text ?? "",
+    toText: transferRequest?.to_text ?? "",
+    departAt: transferRequest?.scheduled_at ? transferRequest.scheduled_at.slice(0, 16) : "",
+    vehicleClass: "",
+    plateNo: "",
+    driverName: "",
+    driverPhone: "",
+    participantIds: transferRequest?.participant_ids ?? [],
+    luggageNote: transferRequest?.luggage_note ?? "",
+  };
+}
+
+function VehicleEditor({
+  vehicles,
+  onChange,
+  participants,
+}: {
+  vehicles: VehicleDraft[];
+  onChange: (next: VehicleDraft[]) => void;
+  participants: ParticipantOption[];
+}) {
+  function update(key: string, patch: Partial<VehicleDraft>) {
+    onChange(vehicles.map((v) => (v.key === key ? { ...v, ...patch } : v)));
+  }
+  function remove(key: string) {
+    onChange(vehicles.filter((v) => v.key !== key));
+  }
+  function toggleParticipant(key: string, participantId: string, checked: boolean) {
+    const vehicle = vehicles.find((v) => v.key === key);
+    if (!vehicle) return;
+    const next = checked
+      ? [...vehicle.participantIds, participantId]
+      : vehicle.participantIds.filter((id) => id !== participantId);
+    update(key, { participantIds: next });
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">차량</p>
+        <Button type="button" variant="ghost" size="sm" onClick={() => onChange([...vehicles, emptyVehicleDraft(null)])}>
+          <Plus className="size-4" />
+          차량 추가
+        </Button>
+      </div>
+      {vehicles.length === 0 && <p className="text-xs text-muted-foreground">차량을 추가해주세요 (대표단이 여러 차량을 쓸 수 있음)</p>}
+      {vehicles.map((v, idx) => (
+        <div key={v.key} className="grid grid-cols-2 gap-2 rounded border p-2 sm:grid-cols-4">
+          <div className="col-span-2 flex items-center justify-between sm:col-span-4">
+            <span className="text-xs text-muted-foreground">차량 {idx + 1}</span>
+            <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(v.key)}>
+              <X className="size-3.5" />
+            </Button>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">출발지</Label>
+            <Input value={v.fromText} onChange={(e) => update(v.key, { fromText: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">도착지</Label>
+            <Input value={v.toText} onChange={(e) => update(v.key, { toText: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">출발 시각</Label>
+            <Input type="datetime-local" value={v.departAt} onChange={(e) => update(v.key, { departAt: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">차종</Label>
+            <Input value={v.vehicleClass} onChange={(e) => update(v.key, { vehicleClass: e.target.value })} placeholder="세단, 밴 등" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">차량 번호</Label>
+            <Input value={v.plateNo} onChange={(e) => update(v.key, { plateNo: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">기사 이름</Label>
+            <Input value={v.driverName} onChange={(e) => update(v.key, { driverName: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">기사 연락처</Label>
+            <Input value={v.driverPhone} onChange={(e) => update(v.key, { driverPhone: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">짐 규모</Label>
+            <Input value={v.luggageNote} onChange={(e) => update(v.key, { luggageNote: e.target.value })} placeholder="캐리어 4개 등" />
+          </div>
+          <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-4">
+            <Label className="text-xs">탑승 참가자</Label>
+            <div className="flex flex-wrap gap-3">
+              {participants.length === 0 && <p className="text-xs text-muted-foreground">참가자 정보가 없습니다.</p>}
+              {participants.map((p) => (
+                <div key={p.id} className="flex items-center gap-1.5">
+                  <Checkbox
+                    id={`${v.key}-${p.id}`}
+                    checked={v.participantIds.includes(p.id)}
+                    onCheckedChange={(checked) => toggleParticipant(v.key, p.id, checked === true)}
+                  />
+                  <Label htmlFor={`${v.key}-${p.id}`} className="text-xs font-normal">
+                    {p.last_name} {p.first_name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TransferConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
+  const transferRequest = firstOrNull(item.transfer_request);
+  const existing = item.vehicle_dispatch ?? [];
+  const participants = item.delegation?.participant ?? [];
+  const [vehicles, setVehicles] = useState<VehicleDraft[]>(() => {
+    if (existing.length > 0) return existing.map((v, i) => toVehicleDraft(v, `existing-${i}`));
+    return [emptyVehicleDraft(transferRequest)];
+  });
+
+  return (
+    <form action={saveVehicleDispatches} onSubmit={onClose} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto">
+      <input type="hidden" name="id" value={item.id} />
+      <input type="hidden" name="vehicles" value={JSON.stringify(vehicles)} />
+
+      {transferRequest && (
+        <div className="rounded-md bg-muted/50 p-3 text-sm">
+          <p className="font-medium">자동 생성된 수송 요청 ({transferRequest.direction === "INBOUND" ? "입국" : "귀국"})</p>
+          <p className="text-muted-foreground">
+            {transferRequest.from_text} → {transferRequest.to_text} · 희망 시각{" "}
+            {transferRequest.scheduled_at ? formatDateTime(transferRequest.scheduled_at, "ko") : "미정"}
+          </p>
+          <p className="text-muted-foreground">탑승 인원 {transferRequest.participant_ids.length}명 (항공편 확정 기준 자동 산정, 필요시 아래에서 조정)</p>
+        </div>
+      )}
+
+      <VehicleEditor vehicles={vehicles} onChange={setVehicles} participants={participants} />
+
+      <DialogFooter>
+        <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
+        <Button type="submit">확정</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 function GenericConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
   return (
     <form action={confirmServiceItem} onSubmit={onClose}>
@@ -498,6 +698,8 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
           <FlightConfirmForm item={item} onClose={close} />
         ) : item.service_type === "LODGING" ? (
           <LodgingConfirmForm item={item} onClose={close} />
+        ) : item.service_type === "TRANSFER" ? (
+          <TransferConfirmForm item={item} onClose={close} />
         ) : (
           <GenericConfirmForm item={item} onClose={close} />
         )}

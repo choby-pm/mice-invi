@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:dev": "node scripts/seed-dev-accounts.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

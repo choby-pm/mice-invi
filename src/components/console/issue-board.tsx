@@ -16,15 +16,16 @@ import {
   URGENCY_BADGE,
 } from "@/lib/change-issue-constants";
 
-interface AdjustmentItemRow {
+export interface AdjustmentItemRow {
   id: string;
   status: string;
   urgency: string;
   due_at: string | null;
-  assignee_vendor: { name: string } | null;
+  assignee_vendor: { id: string; name: string } | null;
+  service_item: { service_type: string } | null;
 }
 
-interface IssueRow {
+export interface IssueRow {
   id: string;
   issue_no: string;
   summary: string;
@@ -44,19 +45,28 @@ function progressOf(items: AdjustmentItemRow[]) {
   return `${done}/${total}`;
 }
 
+function openItemsOf(items: AdjustmentItemRow[]) {
+  return items.filter((i) => OPEN_ITEM_STATUSES.includes(i.status));
+}
+
 // "막힌 곳" — 가장 오래 대기 중인 미완료 항목의 담당 (02 §3.4 PCO-E02)
 function blockedBy(items: AdjustmentItemRow[]) {
-  const open = items.filter((i) => OPEN_ITEM_STATUSES.includes(i.status));
+  const open = openItemsOf(items);
   if (open.length === 0) return "-";
-  const oldest = open[0];
-  return oldest.assignee_vendor?.name ?? "PCO 판단";
+  return open[0].assignee_vendor?.name ?? "PCO 판단";
+}
+
+// 가장 급한 하위 항목의 남은 시간이 가장 짧은 순 (기한 없는 항목은 뒤로)
+function nearestDueAt(items: AdjustmentItemRow[]) {
+  const dues = openItemsOf(items)
+    .map((i) => i.due_at)
+    .filter((d): d is string => Boolean(d))
+    .map((d) => new Date(d).getTime());
+  return dues.length > 0 ? Math.min(...dues) : Infinity;
 }
 
 export function IssueBoard({ eventId, issues }: { eventId: string; issues: IssueRow[] }) {
-  const sorted = [...issues].sort((a, b) => {
-    const rank: Record<string, number> = { URGENT: 0, CAUTION: 1, NORMAL: 2 };
-    return (rank[a.max_urgency] ?? 3) - (rank[b.max_urgency] ?? 3);
-  });
+  const sorted = [...issues].sort((a, b) => nearestDueAt(a.adjustment_item) - nearestDueAt(b.adjustment_item));
 
   return (
     <div className="overflow-x-auto rounded-md border">

@@ -15,7 +15,7 @@ export default async function ProgramDetailPage({
   const [{ data: program }, { data: attendance }, { data: delegations }] = await Promise.all([
     supabase
       .from("program")
-      .select("id, name, program_type, organizer_type, organizer_delegation:organizer_delegation_id(name), registered_by_type, pco_adjust_note, start_at, end_at, venue, venue_address, visibility, dress_code, status, internal_note")
+      .select("id, name, program_type, organizer_type, organizer_delegation:organizer_delegation_id(name), registered_by_type, transfer_needed, late_registration, pco_adjust_note, start_at, end_at, venue, venue_address, visibility, dress_code, status, internal_note")
       .eq("id", programId)
       .single(),
     supabase

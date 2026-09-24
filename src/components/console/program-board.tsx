@@ -51,6 +51,7 @@ interface ProgramRow {
   visibility: string;
   start_at: string | null;
   venue: string | null;
+  late_registration: boolean;
 }
 interface DelegationOption { id: string; name: string }
 
@@ -200,8 +201,11 @@ export function ProgramBoard({
                 <TableRow key={p.id}>
                   <TableCell>
                     <Link href={`/console/events/${eventId}/programs/${p.id}`} className="font-medium hover:underline">
-                      {p.name}
+                      {p.program_type === "SELF_SCHEDULED" && "🏳️ "}{p.name}
                     </Link>
+                    {p.late_registration && (
+                      <StatusBadge status="urgent" className="ml-1.5">늦은 등록</StatusBadge>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{PROGRAM_TYPE_LABEL[p.program_type]}</TableCell>
                   <TableCell className="text-muted-foreground">{ORGANIZER_TYPE_LABEL[p.organizer_type]}</TableCell>

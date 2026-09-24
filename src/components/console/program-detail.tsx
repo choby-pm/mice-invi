@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ import {
   cancelProgram,
   addProgramAttendance,
   removeProgramAttendance,
+  sendProgramAdjustNote,
 } from "@/server/modules/program/actions";
 
 interface ProgramRow {
@@ -54,6 +56,8 @@ interface ProgramRow {
   organizer_type: string;
   organizer_delegation: { name: string } | null;
   registered_by_type: string;
+  transfer_needed: boolean | null;
+  late_registration: boolean;
   pco_adjust_note: string | null;
   start_at: string | null;
   end_at: string | null;
@@ -148,6 +152,32 @@ function AddAttendanceDialog({
   );
 }
 
+function AdjustNoteForm({
+  programId,
+  eventId,
+  onDone,
+}: {
+  programId: string;
+  eventId: string;
+  onDone: () => void;
+}) {
+  return (
+    <form action={sendProgramAdjustNote} onSubmit={onDone} className="mt-2 flex flex-col gap-2 rounded-md border p-3">
+      <input type="hidden" name="id" value={programId} />
+      <input type="hidden" name="eventId" value={eventId} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="adjust-note">조정 요청 내용</Label>
+        <Textarea id="adjust-note" name="note" placeholder="예: 이 시간에 본회의 일정이 있습니다. 확인 부탁드립니다." required />
+      </div>
+      <p className="text-xs text-muted-foreground">자체 일정은 직접 수정할 수 없어 대리인에게 메시지로만 전달됩니다.</p>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>취소</Button>
+        <Button type="submit" size="sm">보내기</Button>
+      </div>
+    </form>
+  );
+}
+
 export function ProgramDetail({
   eventId,
   program,
@@ -162,7 +192,9 @@ export function ProgramDetail({
   revalidateTo: string;
 }) {
   const [addOpen, setAddOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const existingIds = new Set(attendance.map((a) => a.participant?.id).filter((id): id is string => Boolean(id)));
+  const isSelfScheduled = program.program_type === "SELF_SCHEDULED";
 
   return (
     <div className="space-y-4">
@@ -185,7 +217,12 @@ export function ProgramDetail({
           {program.venue && <p className="text-muted-foreground">장소: {program.venue}</p>}
           {program.dress_code && <p className="text-muted-foreground">드레스 코드: {program.dress_code}</p>}
           {program.registered_by_type === "PROXY" && (
-            <p className="text-xs text-muted-foreground">🏳️ 대표단 자체 일정 — 대리인이 직접 등록</p>
+            <p className="text-xs text-muted-foreground">
+              🏳️ 대표단 자체 일정 — 대리인이 직접 등록{program.transfer_needed && " · 차량 요청됨"}
+            </p>
+          )}
+          {program.late_registration && (
+            <p className="text-status-urgent-fg">🔴 늦은 등록 — 일정 시작 24시간 이내에 등록됨</p>
           )}
           {program.pco_adjust_note && (
             <p className="rounded-md bg-status-action-bg p-2 text-status-action-fg">PCO 조정 요청: {program.pco_adjust_note}</p>
@@ -206,7 +243,11 @@ export function ProgramDetail({
                 <Button type="submit" size="sm" variant="outline">취소</Button>
               </form>
             )}
+            {isSelfScheduled && program.status === "CONFIRMED" && (
+              <Button size="sm" variant="outline" onClick={() => setAdjustOpen((v) => !v)}>조정 요청 보내기</Button>
+            )}
           </div>
+          {adjustOpen && <AdjustNoteForm programId={program.id} eventId={eventId} onDone={() => setAdjustOpen(false)} />}
         </CardContent>
       </Card>
 

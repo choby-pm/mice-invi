@@ -8,7 +8,7 @@ export default async function ProgramsPage({ params }: { params: Promise<{ id: s
   const [{ data: programs }, { data: delegations }] = await Promise.all([
     supabase
       .from("program")
-      .select("id, name, program_type, organizer_type, status, visibility, start_at, venue")
+      .select("id, name, program_type, organizer_type, status, visibility, start_at, venue, late_registration")
       .eq("event_id", eventId)
       .order("start_at", { ascending: true, nullsFirst: false }),
     supabase.from("delegation").select("id, name").eq("event_id", eventId).order("name"),

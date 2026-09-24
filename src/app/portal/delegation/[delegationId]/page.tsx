@@ -38,7 +38,7 @@ export default async function PortalDelegationPage({
       .order("service_type"),
     supabase
       .from("program")
-      .select("id, name, program_type, start_at, venue, status, program_attendance(id, status, participant:participant_id(id, first_name, last_name))")
+      .select("id, name, program_type, start_at, venue, status, late_registration, pco_adjust_note, program_attendance(id, status, participant:participant_id(id, first_name, last_name))")
       .eq("event_id", delegation.event_id)
       .order("start_at", { ascending: true, nullsFirst: false }),
   ]);
@@ -100,7 +100,13 @@ export default async function PortalDelegationPage({
             <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
           )}
 
-          <ProgramList programs={(programs ?? []) as never} revalidateTo={revalidateTo} />
+          <ProgramList
+            delegationId={delegationId}
+            eventId={delegation.event_id}
+            programs={(programs ?? []) as never}
+            participants={participants ?? []}
+            revalidateTo={revalidateTo}
+          />
         </>
       )}
     </div>

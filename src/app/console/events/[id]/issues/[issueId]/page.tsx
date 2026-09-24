@@ -12,7 +12,7 @@ export default async function IssueDetailPage({
   const { id: eventId, issueId } = await params;
   const supabase = await createServerSupabaseClient();
 
-  const [{ data: issue }, { data: items }] = await Promise.all([
+  const [{ data: issue }, { data: items }, { data: eventVendors }] = await Promise.all([
     supabase
       .from("change_issue")
       .select("id, issue_no, summary, status, max_urgency, before, after, source, created_at, closed_at, force_close_reason, superseded_by_id, delegation:delegation_id(name)")
@@ -21,11 +21,12 @@ export default async function IssueDetailPage({
     supabase
       .from("adjustment_item")
       .select(
-        "id, status, urgency, instruction, due_at, resolution_note, close_reason, kind, impact_rule_code, service_item:service_item_id(service_type), assignee_vendor:assignee_vendor_id(name)",
+        "id, status, urgency, instruction, due_at, resolution_note, close_reason, kind, impact_rule_code, service_item:service_item_id(service_type), assignee_vendor:assignee_vendor_id(id, name)",
       )
       .eq("issue_id", issueId)
       .order("depth", { ascending: true })
       .order("created_at", { ascending: true }),
+    supabase.from("event_vendor").select("service_types, vendor:vendor_id(id, name)").eq("event_id", eventId),
   ]);
   if (!issue) notFound();
 
@@ -37,7 +38,12 @@ export default async function IssueDetailPage({
         <ArrowLeft className="size-3.5" />
         변경 이슈 목록
       </Link>
-      <IssueDetail issue={issue as never} items={(items ?? []) as never} revalidateTo={revalidateTo} />
+      <IssueDetail
+        issue={issue as never}
+        items={(items ?? []) as never}
+        eventVendors={(eventVendors ?? []) as never}
+        revalidateTo={revalidateTo}
+      />
     </div>
   );
 }

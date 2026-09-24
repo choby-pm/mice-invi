@@ -42,6 +42,17 @@ export async function markAdjustmentNotApplicable(formData: FormData) {
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
+export async function reassignAdjustmentItem(formData: FormData) {
+  const id = formData.get("id") as string;
+  const vendorId = formData.get("vendorId") as string;
+  const revalidateTo = formData.get("revalidateTo") as string;
+  if (!id || !vendorId) return;
+
+  const supabase = await createServerSupabaseClient();
+  await supabase.rpc("reassign_adjustment_item", { p_item_id: id, p_new_vendor_id: vendorId });
+  if (revalidateTo) revalidatePath(revalidateTo);
+}
+
 export async function forceCloseChangeIssue(formData: FormData) {
   const id = formData.get("id") as string;
   const reason = (formData.get("reason") as string)?.trim() || "";

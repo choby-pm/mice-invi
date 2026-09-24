@@ -2,10 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { SERVICE_TYPES, SERVICE_STATUS_LABEL, SERVICE_STATUS_BADGE } from "@/lib/service-item-constants";
 import { ParticipantList } from "@/components/console/participant-list";
 import { DelegateList } from "@/components/console/delegate-list";
+import { DelegationMatrix } from "@/components/console/delegation-matrix";
 
 export default async function DelegationDetailPage({
   params,
@@ -29,7 +28,7 @@ export default async function DelegationDetailPage({
       .order("sort_order", { ascending: true }),
     supabase
       .from("service_item")
-      .select("id, service_type, status, event_vendor:event_vendor_id(vendor:vendor_id(name))")
+      .select("id, service_type, status, room_assignment(*), vehicle_dispatch(*), transfer_request(*)")
       .eq("delegation_id", delegationId),
     supabase
       .from("delegation_proxy")
@@ -59,28 +58,15 @@ export default async function DelegationDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">서비스 항목</CardTitle>
+          <CardTitle className="text-sm">참가자별 서비스 현황</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* "서비스 현황" 탭과 같은 service_item 데이터를 대표단 관점으로 보여줍니다 —
+          {/* "서비스 현황" 탭과 같은 service_item 데이터를 참가자 관점으로 보여줍니다(U2, 02 §3.6) —
               어느 쪽에서 바뀌어도 같은 데이터라 항상 같은 상태가 보입니다. */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {SERVICE_TYPES.map((t) => {
-              const item = serviceItems?.find((si) => si.service_type === t.value);
-              return (
-                <div key={t.value} className="rounded-md border px-3 py-2">
-                  <p className="text-xs text-muted-foreground">{t.label}</p>
-                  {item ? (
-                    <StatusBadge status={SERVICE_STATUS_BADGE[item.status]} className="mt-1">
-                      {SERVICE_STATUS_LABEL[item.status]}
-                    </StatusBadge>
-                  ) : (
-                    <p className="mt-1 text-xs text-muted-foreground">-</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <DelegationMatrix
+            participants={participants ?? []}
+            serviceItems={(serviceItems ?? []) as never}
+          />
         </CardContent>
       </Card>
 

@@ -41,7 +41,7 @@ export default async function PortalLoginPage({
                 <input type="hidden" name="email" value={email} />
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="token">인증번호</Label>
-                  <Input id="token" name="token" inputMode="numeric" maxLength={6} required autoFocus />
+                  <Input id="token" name="token" inputMode="numeric" maxLength={8} required autoFocus />
                 </div>
                 <Button type="submit" className="mt-2">확인</Button>
               </form>

@@ -6,16 +6,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { submitServiceRequest } from "@/server/modules/service-item/portal-actions";
 import { saveFlightRequest } from "@/server/modules/service-item/flight-actions";
 import { saveLodgingRequest } from "@/server/modules/service-item/lodging-actions";
+import { saveDietaryRequirements } from "@/server/modules/service-item/dietary-actions";
 import {
   SERVICE_TYPES,
   SERVICE_TYPE_COLUMN_LABELS,
   SERVICE_STATUS_LABEL,
   SERVICE_STATUS_BADGE,
 } from "@/lib/service-item-constants";
+
+const DIETARY_CODE_LABEL: Record<string, string> = {
+  NONE: "일반",
+  HALAL: "할랄",
+  VEGETARIAN: "채식",
+  VEGAN: "비건",
+  KOSHER: "코셔",
+  ALLERGY: "알레르기",
+  OTHER: "기타",
+};
 
 interface FlightRequestRow {
   inbound_origin_city: string | null;
@@ -34,6 +52,18 @@ interface LodgingRequestRow {
   note: string | null;
 }
 
+interface DietaryRequirementRow {
+  participant_id: string;
+  dietary_code: string;
+  note: string | null;
+}
+
+interface ParticipantOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 interface ServiceItemRow {
   id: string;
   service_type: string;
@@ -42,6 +72,7 @@ interface ServiceItemRow {
   scheduled_at: string | null;
   flight_request?: FlightRequestRow | FlightRequestRow[] | null;
   lodging_request?: LodgingRequestRow | LodgingRequestRow[] | null;
+  dietary_requirement?: DietaryRequirementRow[] | null;
 }
 
 function firstOrNull<T>(v: T | T[] | null | undefined): T | null {
@@ -168,7 +199,83 @@ function LodgingRequestFields({ item, lodgingRequest }: { item: ServiceItemRow; 
   );
 }
 
-function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; revalidateTo: string }) {
+function DietaryRequestForm({
+  item,
+  participants,
+  revalidateTo,
+  submitted,
+  onDone,
+}: {
+  item: ServiceItemRow;
+  participants: ParticipantOption[];
+  revalidateTo: string;
+  submitted: boolean;
+  onDone: () => void;
+}) {
+  const existing = item.dietary_requirement ?? [];
+  const [entries, setEntries] = useState(() =>
+    participants.map((p) => {
+      const found = existing.find((e) => e.participant_id === p.id);
+      return { participantId: p.id, dietaryCode: found?.dietary_code ?? "NONE", note: found?.note ?? "" };
+    }),
+  );
+
+  function update(participantId: string, patch: Partial<{ dietaryCode: string; note: string }>) {
+    setEntries((prev) => prev.map((e) => (e.participantId === participantId ? { ...e, ...patch } : e)));
+  }
+
+  return (
+    <form action={saveDietaryRequirements} onSubmit={onDone} className="flex flex-col gap-3">
+      <input type="hidden" name="serviceItemId" value={item.id} />
+      <input type="hidden" name="revalidateTo" value={revalidateTo} />
+      <input type="hidden" name="entries" value={JSON.stringify(entries)} />
+      {participants.length === 0 ? (
+        <p className="text-sm text-muted-foreground">참가자를 먼저 추가해주세요.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {participants.map((p) => {
+            const entry = entries.find((e) => e.participantId === p.id)!;
+            return (
+              <div key={p.id} className="rounded-md border p-2">
+                <p className="text-sm font-medium">{p.last_name} {p.first_name}</p>
+                <div className="mt-1.5 flex flex-col gap-1.5 sm:flex-row">
+                  <Select value={entry.dietaryCode} onValueChange={(v) => update(p.id, { dietaryCode: v ?? "NONE" })}>
+                    <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DIETARY_CODE_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={entry.note}
+                    onChange={(e) => update(p.id, { note: e.target.value })}
+                    placeholder="예: 견과류 알레르기"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>취소</Button>
+        <Button type="submit" size="sm">{submitted ? "저장" : "요청 제출"}</Button>
+      </div>
+    </form>
+  );
+}
+
+function ServiceRequestCard({
+  item,
+  participants,
+  revalidateTo,
+}: {
+  item: ServiceItemRow;
+  participants: ParticipantOption[];
+  revalidateTo: string;
+}) {
   const [open, setOpen] = useState(false);
   const typeInfo = SERVICE_TYPES.find((t) => t.value === item.service_type);
   const columns = SERVICE_TYPE_COLUMN_LABELS[item.service_type];
@@ -178,6 +285,7 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
   // 수송은 대리인이 요청하지 않고 항공 확정 결과로 시스템이 자동 생성합니다(P08) — 그래서
   // 편집 버튼 없이 확정 결과만 보여줍니다.
   const isTransfer = item.service_type === "TRANSFER";
+  const isDietary = item.service_type === "DIETARY";
   const flightRequest = firstOrNull(item.flight_request);
   const lodgingRequest = firstOrNull(item.lodging_request);
 
@@ -219,6 +327,14 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
               <Button type="submit" size="sm">{submitted ? "저장" : "요청 제출"}</Button>
             </div>
           </form>
+        ) : isDietary ? (
+          <DietaryRequestForm
+            item={item}
+            participants={participants}
+            revalidateTo={revalidateTo}
+            submitted={submitted}
+            onDone={() => setOpen(false)}
+          />
         ) : (
           <form
             action={submitServiceRequest}
@@ -251,13 +367,21 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
   );
 }
 
-export function ServiceRequestList({ items, revalidateTo }: { items: ServiceItemRow[]; revalidateTo: string }) {
+export function ServiceRequestList({
+  items,
+  participants,
+  revalidateTo,
+}: {
+  items: ServiceItemRow[];
+  participants: ParticipantOption[];
+  revalidateTo: string;
+}) {
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-medium text-muted-foreground">서비스 요청</h2>
       <div className="space-y-3">
         {items.map((item) => (
-          <ServiceRequestCard key={item.id} item={item} revalidateTo={revalidateTo} />
+          <ServiceRequestCard key={item.id} item={item} participants={participants} revalidateTo={revalidateTo} />
         ))}
       </div>
     </div>

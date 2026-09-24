@@ -29,9 +29,12 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { BlankScreen } from "@/components/shared/blank-screen";
 import { createServiceItem, deleteServiceItem } from "@/server/modules/service-item/actions";
+import { saveAirportRequest } from "@/server/modules/service-item/airport-actions";
 import { formatDateTime } from "@/lib/date";
 import {
   SERVICE_TYPES,
@@ -41,6 +44,18 @@ import {
   SERVICE_TYPE_COLUMN_LABELS,
 } from "@/lib/service-item-constants";
 
+const AIRPORT_SCOPE_OPTIONS = [
+  { value: "GREETING", label: "영접 인사" },
+  { value: "FAST_TRACK", label: "패스트트랙" },
+  { value: "LOUNGE", label: "라운지" },
+  { value: "BAGGAGE", label: "수하물 대행" },
+];
+
+interface AirportRequestRow {
+  scope: string[];
+  note: string | null;
+}
+
 interface ServiceItemRow {
   id: string;
   service_type: string;
@@ -49,6 +64,65 @@ interface ServiceItemRow {
   scheduled_at: string | null;
   delegation: { id: string; name: string } | null;
   event_vendor: { id: string; vendor: { name: string } | null } | null;
+  airport_request?: AirportRequestRow | AirportRequestRow[] | null;
+}
+
+function firstOrNull<T>(v: T | T[] | null | undefined): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
+// 공항 의전 범위는 대리인이 아니라 PCO가 지정합니다(P09) — 그래서 대표단 화면이 아니라
+// 여기 콘솔 서비스 현황에서 설정합니다.
+function AirportScopeDialog({
+  item,
+  eventId,
+  open,
+  onOpenChange,
+}: {
+  item: ServiceItemRow;
+  eventId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const request = firstOrNull(item.airport_request);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form action={saveAirportRequest} onSubmit={() => onOpenChange(false)}>
+          <DialogHeader>
+            <DialogTitle>의전 범위 지정</DialogTitle>
+          </DialogHeader>
+          <input type="hidden" name="serviceItemId" value={item.id} />
+          <input type="hidden" name="revalidateTo" value={`/console/events/${eventId}/services`} />
+          <div className="flex flex-col gap-3 py-4">
+            <div className="flex flex-col gap-2">
+              <Label>의전 범위 (여러 개 선택 가능)</Label>
+              {AIRPORT_SCOPE_OPTIONS.map((o) => (
+                <div key={o.value} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`scope-${item.id}-${o.value}`}
+                    name="scope"
+                    value={o.value}
+                    defaultChecked={request?.scope.includes(o.value)}
+                  />
+                  <Label htmlFor={`scope-${item.id}-${o.value}`} className="font-normal">{o.label}</Label>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`airport-note-${item.id}`}>메모</Label>
+              <Textarea id={`airport-note-${item.id}`} name="note" defaultValue={request?.note ?? ""} />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
+            <Button type="submit">저장</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 interface DelegationOption { id: string; name: string }
 interface EventVendorOption { id: string; service_types: string[]; vendor: { name: string } | null }
@@ -127,6 +201,49 @@ function AddServiceItemDialog({
   );
 }
 
+function ServiceItemTableRow({ item, eventId }: { item: ServiceItemRow; eventId: string }) {
+  const [scopeOpen, setScopeOpen] = useState(false);
+  return (
+    <TableRow>
+      <TableCell>{item.delegation?.name}</TableCell>
+      <TableCell>
+        <StatusBadge status={STATUS_BADGE[item.status]}>{STATUS_LABEL[item.status]}</StatusBadge>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {item.support_type ? SUPPORT_TYPE_LABEL[item.support_type] : "-"}
+      </TableCell>
+      <TableCell className="text-muted-foreground">{item.event_vendor?.vendor?.name ?? "미지정"}</TableCell>
+      <TableCell className="text-muted-foreground">
+        {item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "-"}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          {item.service_type === "AIRPORT" && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setScopeOpen(true)}>
+              의전 범위
+            </Button>
+          )}
+          {item.status === "DRAFT" && (
+            <form action={deleteServiceItem}>
+              <input type="hidden" name="id" value={item.id} />
+              <input type="hidden" name="eventId" value={eventId} />
+              {item.delegation?.id && (
+                <input type="hidden" name="delegationId" value={item.delegation.id} />
+              )}
+              <Button type="submit" variant="ghost" size="icon-sm">
+                <X className="size-4" />
+              </Button>
+            </form>
+          )}
+        </div>
+      </TableCell>
+      {item.service_type === "AIRPORT" && (
+        <AirportScopeDialog item={item} eventId={eventId} open={scopeOpen} onOpenChange={setScopeOpen} />
+      )}
+    </TableRow>
+  );
+}
+
 function ServiceTypeTable({
   eventId,
   serviceType,
@@ -167,33 +284,7 @@ function ServiceTypeTable({
           </TableHeader>
           <TableBody>
             {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.delegation?.name}</TableCell>
-                <TableCell>
-                  <StatusBadge status={STATUS_BADGE[item.status]}>{STATUS_LABEL[item.status]}</StatusBadge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {item.support_type ? SUPPORT_TYPE_LABEL[item.support_type] : "-"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{item.event_vendor?.vendor?.name ?? "미지정"}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "-"}
-                </TableCell>
-                <TableCell>
-                  {item.status === "DRAFT" && (
-                    <form action={deleteServiceItem}>
-                      <input type="hidden" name="id" value={item.id} />
-                      <input type="hidden" name="eventId" value={eventId} />
-                      {item.delegation?.id && (
-                        <input type="hidden" name="delegationId" value={item.delegation.id} />
-                      )}
-                      <Button type="submit" variant="ghost" size="icon-sm">
-                        <X className="size-4" />
-                      </Button>
-                    </form>
-                  )}
-                </TableCell>
-              </TableRow>
+              <ServiceItemTableRow key={item.id} item={item} eventId={eventId} />
             ))}
           </TableBody>
         </Table>

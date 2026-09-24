@@ -34,6 +34,7 @@ import { startServiceItem, confirmServiceItem } from "@/server/modules/service-i
 import { saveFlightSegments } from "@/server/modules/service-item/flight-actions";
 import { saveRoomAssignments } from "@/server/modules/service-item/lodging-actions";
 import { saveVehicleDispatches } from "@/server/modules/service-item/transfer-actions";
+import { saveAirportAssignment } from "@/server/modules/service-item/airport-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   SERVICE_TYPES,
@@ -114,6 +115,24 @@ interface VehicleDispatchRow {
   luggage_note: string | null;
 }
 
+interface AirportRequestRow {
+  scope: string[];
+  note: string | null;
+}
+
+interface AirportAssignmentRow {
+  attendant_name: string | null;
+  meeting_point: string | null;
+  meeting_at: string | null;
+  note: string | null;
+}
+
+interface DietaryRequirementRow {
+  dietary_code: string;
+  note: string | null;
+  participant: { first_name: string; last_name: string } | null;
+}
+
 export interface VendorTaskRow {
   id: string;
   service_type: string;
@@ -128,7 +147,27 @@ export interface VendorTaskRow {
   room_assignment?: RoomAssignmentRow[] | null;
   transfer_request?: TransferRequestRow | TransferRequestRow[] | null;
   vehicle_dispatch?: VehicleDispatchRow[] | null;
+  airport_request?: AirportRequestRow | AirportRequestRow[] | null;
+  airport_assignment?: AirportAssignmentRow[] | null;
+  dietary_requirement?: DietaryRequirementRow[] | null;
 }
+
+const AIRPORT_SCOPE_LABEL: Record<string, string> = {
+  GREETING: "영접 인사",
+  FAST_TRACK: "패스트트랙",
+  LOUNGE: "라운지",
+  BAGGAGE: "수하물 대행",
+};
+
+const DIETARY_CODE_LABEL: Record<string, string> = {
+  NONE: "일반",
+  HALAL: "할랄",
+  VEGETARIAN: "채식",
+  VEGAN: "비건",
+  KOSHER: "코셔",
+  ALLERGY: "알레르기",
+  OTHER: "기타",
+};
 
 const SERVICE_TYPE_LABEL = Object.fromEntries(SERVICE_TYPES.map((t) => [t.value, t.label]));
 const TICKET_STATUS_LABEL: Record<string, string> = { BOOKED: "예약", TICKETED: "발권", CANCELLED: "취소" };
@@ -670,6 +709,88 @@ function TransferConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: 
   );
 }
 
+function AirportConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
+  const airportRequest = firstOrNull(item.airport_request);
+  const existing = firstOrNull(item.airport_assignment ?? null);
+
+  return (
+    <form action={saveAirportAssignment} onSubmit={onClose} className="flex flex-col gap-3">
+      <input type="hidden" name="id" value={item.id} />
+
+      {airportRequest && (
+        <div className="rounded-md bg-muted/50 p-3 text-sm">
+          <p className="font-medium">PCO 지정 의전 범위</p>
+          <p className="text-muted-foreground">
+            {airportRequest.scope.length > 0
+              ? airportRequest.scope.map((s) => AIRPORT_SCOPE_LABEL[s] ?? s).join(" · ")
+              : "지정된 범위 없음"}
+          </p>
+          {airportRequest.note && <p className="text-muted-foreground">메모: {airportRequest.note}</p>}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="attendantName">담당 요원</Label>
+        <Input id="attendantName" name="attendantName" defaultValue={existing?.attendant_name ?? ""} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="meetingPoint">만남 장소</Label>
+        <Input id="meetingPoint" name="meetingPoint" defaultValue={existing?.meeting_point ?? ""} placeholder="예: 입국장 3번 게이트" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="meetingAt">만남 시각</Label>
+        <Input
+          id="meetingAt"
+          name="meetingAt"
+          type="datetime-local"
+          defaultValue={existing?.meeting_at ? existing.meeting_at.slice(0, 16) : ""}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="airportNote">메모</Label>
+        <Textarea id="airportNote" name="note" defaultValue={existing?.note ?? ""} />
+      </div>
+      <DialogFooter>
+        <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
+        <Button type="submit">확정</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function DietaryConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
+  const requirements = item.dietary_requirement ?? [];
+
+  return (
+    <form action={confirmServiceItem} onSubmit={onClose} className="flex flex-col gap-3">
+      <input type="hidden" name="id" value={item.id} />
+
+      {requirements.length > 0 && (
+        <div className="rounded-md bg-muted/50 p-3 text-sm">
+          <p className="font-medium">참가자별 식이 요구</p>
+          <ul className="mt-1 space-y-0.5 text-muted-foreground">
+            {requirements.map((r, i) => (
+              <li key={i}>
+                {r.participant?.last_name} {r.participant?.first_name} — {DIETARY_CODE_LABEL[r.dietary_code] ?? r.dietary_code}
+                {r.note && ` (${r.note})`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div>
+        <Label htmlFor="confirmationNote">반영 확인 메모</Label>
+        <Textarea id="confirmationNote" name="confirmationNote" defaultValue={item.confirmation_note ?? ""} className="mt-1.5" />
+      </div>
+      <DialogFooter>
+        <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
+        <Button type="submit">반영 확인</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 function GenericConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
   return (
     <form action={confirmServiceItem} onSubmit={onClose}>
@@ -700,6 +821,10 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
           <LodgingConfirmForm item={item} onClose={close} />
         ) : item.service_type === "TRANSFER" ? (
           <TransferConfirmForm item={item} onClose={close} />
+        ) : item.service_type === "AIRPORT" ? (
+          <AirportConfirmForm item={item} onClose={close} />
+        ) : item.service_type === "DIETARY" ? (
+          <DietaryConfirmForm item={item} onClose={close} />
         ) : (
           <GenericConfirmForm item={item} onClose={close} />
         )}

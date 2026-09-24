@@ -8,7 +8,7 @@ export default async function VendorHomePage() {
     supabase
       .from("service_item")
       .select(
-        "id, service_type, status, note, confirmation_note, scheduled_at, delegation:delegation_id(id, name, event:event_id(name), participant(id, first_name, last_name, participant_type)), flight_request(*), flight_segment(*), lodging_request(*), room_assignment(*), transfer_request(*), vehicle_dispatch(*)",
+        "id, service_type, status, note, confirmation_note, scheduled_at, delegation:delegation_id(id, name, event:event_id(name), participant(id, first_name, last_name, participant_type)), flight_request(*), flight_segment(*), lodging_request(*), room_assignment(*), transfer_request(*), vehicle_dispatch(*), airport_request(*), airport_assignment(*), dietary_requirement(*, participant:participant_id(first_name, last_name))",
       )
       .in("status", ["REQUESTED", "IN_PROGRESS", "CONFIRMED"])
       .order("status"),

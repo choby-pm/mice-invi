@@ -32,7 +32,7 @@ export default async function PortalDelegationPage({
       .order("sort_order", { ascending: true }),
     supabase
       .from("service_item")
-      .select("id, service_type, status, note, scheduled_at, flight_request(*), lodging_request(*)")
+      .select("id, service_type, status, note, scheduled_at, flight_request(*), lodging_request(*), dietary_requirement(*)")
       .eq("delegation_id", delegationId)
       .order("service_type"),
   ]);
@@ -91,7 +91,7 @@ export default async function PortalDelegationPage({
           )}
 
           {serviceItems && serviceItems.length > 0 && (
-            <ServiceRequestList items={serviceItems} revalidateTo={revalidateTo} />
+            <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
           )}
         </>
       )}

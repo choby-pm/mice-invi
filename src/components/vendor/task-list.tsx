@@ -32,6 +32,8 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge";
 import { startServiceItem, confirmServiceItem } from "@/server/modules/service-item/vendor-actions";
 import { saveFlightSegments } from "@/server/modules/service-item/flight-actions";
+import { saveRoomAssignments } from "@/server/modules/service-item/lodging-actions";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   SERVICE_TYPES,
   SERVICE_STATUS_LABEL,
@@ -65,6 +67,31 @@ interface FlightSegmentRow {
   change_fee_currency: string | null;
 }
 
+interface LodgingRequestRow {
+  check_in_preferred_date: string | null;
+  check_out_preferred_date: string | null;
+  room_grouping_note: string | null;
+  note: string | null;
+}
+
+interface RoomAssignmentRow {
+  hotel_name: string;
+  room_type: string | null;
+  participant_ids: string[];
+  check_in_at: string | null;
+  check_out_at: string | null;
+  confirmation_no: string | null;
+  room_no: string | null;
+  note: string | null;
+}
+
+interface ParticipantOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+  participant_type: string;
+}
+
 export interface VendorTaskRow {
   id: string;
   service_type: string;
@@ -72,9 +99,11 @@ export interface VendorTaskRow {
   note: string | null;
   confirmation_note: string | null;
   scheduled_at: string | null;
-  delegation: { name: string; event: { name: string } | null } | null;
+  delegation: { name: string; event: { name: string } | null; participant?: ParticipantOption[] } | null;
   flight_request?: FlightRequestRow | FlightRequestRow[] | null;
   flight_segment?: FlightSegmentRow[] | null;
+  lodging_request?: LodgingRequestRow | LodgingRequestRow[] | null;
+  room_assignment?: RoomAssignmentRow[] | null;
 }
 
 const SERVICE_TYPE_LABEL = Object.fromEntries(SERVICE_TYPES.map((t) => [t.value, t.label]));
@@ -272,6 +301,175 @@ function FlightConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: ()
   );
 }
 
+interface RoomDraft {
+  key: string;
+  hotelName: string;
+  roomType: string;
+  participantIds: string[];
+  checkInAt: string;
+  checkOutAt: string;
+  confirmationNo: string;
+  roomNo: string;
+  note: string;
+}
+
+function toRoomDraft(row: RoomAssignmentRow, key: string): RoomDraft {
+  return {
+    key,
+    hotelName: row.hotel_name ?? "",
+    roomType: row.room_type ?? "",
+    participantIds: row.participant_ids ?? [],
+    checkInAt: row.check_in_at ? row.check_in_at.slice(0, 16) : "",
+    checkOutAt: row.check_out_at ? row.check_out_at.slice(0, 16) : "",
+    confirmationNo: row.confirmation_no ?? "",
+    roomNo: row.room_no ?? "",
+    note: row.note ?? "",
+  };
+}
+
+function emptyRoomDraft(): RoomDraft {
+  return {
+    key: `room-${Math.random().toString(36).slice(2)}`,
+    hotelName: "",
+    roomType: "",
+    participantIds: [],
+    checkInAt: "",
+    checkOutAt: "",
+    confirmationNo: "",
+    roomNo: "",
+    note: "",
+  };
+}
+
+function RoomEditor({
+  rooms,
+  onChange,
+  participants,
+}: {
+  rooms: RoomDraft[];
+  onChange: (next: RoomDraft[]) => void;
+  participants: ParticipantOption[];
+}) {
+  function update(key: string, patch: Partial<RoomDraft>) {
+    onChange(rooms.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  }
+  function remove(key: string) {
+    onChange(rooms.filter((r) => r.key !== key));
+  }
+  function toggleParticipant(key: string, participantId: string, checked: boolean) {
+    const room = rooms.find((r) => r.key === key);
+    if (!room) return;
+    const next = checked
+      ? [...room.participantIds, participantId]
+      : room.participantIds.filter((id) => id !== participantId);
+    update(key, { participantIds: next });
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">객실</p>
+        <Button type="button" variant="ghost" size="sm" onClick={() => onChange([...rooms, emptyRoomDraft()])}>
+          <Plus className="size-4" />
+          객실 추가
+        </Button>
+      </div>
+      {rooms.length === 0 && <p className="text-xs text-muted-foreground">객실을 추가해주세요 (한 대표단이 여러 객실을 쓸 수 있음)</p>}
+      {rooms.map((r, idx) => (
+        <div key={r.key} className="grid grid-cols-2 gap-2 rounded border p-2 sm:grid-cols-4">
+          <div className="col-span-2 flex items-center justify-between sm:col-span-4">
+            <span className="text-xs text-muted-foreground">객실 {idx + 1}</span>
+            <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(r.key)}>
+              <X className="size-3.5" />
+            </Button>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">호텔</Label>
+            <Input value={r.hotelName} onChange={(e) => update(r.key, { hotelName: e.target.value })} placeholder="롯데호텔 서울" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">객실 타입</Label>
+            <Input value={r.roomType} onChange={(e) => update(r.key, { roomType: e.target.value })} placeholder="디럭스 트윈" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">체크인</Label>
+            <Input type="datetime-local" value={r.checkInAt} onChange={(e) => update(r.key, { checkInAt: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">체크아웃</Label>
+            <Input type="datetime-local" value={r.checkOutAt} onChange={(e) => update(r.key, { checkOutAt: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">예약번호</Label>
+            <Input value={r.confirmationNo} onChange={(e) => update(r.key, { confirmationNo: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">객실 번호 (선택)</Label>
+            <Input value={r.roomNo} onChange={(e) => update(r.key, { roomNo: e.target.value })} />
+          </div>
+          <div className="col-span-2 flex flex-col gap-1 sm:col-span-4">
+            <Label className="text-xs">요청 반영 메모</Label>
+            <Input value={r.note} onChange={(e) => update(r.key, { note: e.target.value })} placeholder="얼리 체크인 등" />
+          </div>
+          <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-4">
+            <Label className="text-xs">투숙 참가자</Label>
+            <div className="flex flex-wrap gap-3">
+              {participants.length === 0 && <p className="text-xs text-muted-foreground">참가자 정보가 없습니다.</p>}
+              {participants.map((p) => (
+                <div key={p.id} className="flex items-center gap-1.5">
+                  <Checkbox
+                    id={`${r.key}-${p.id}`}
+                    checked={r.participantIds.includes(p.id)}
+                    onCheckedChange={(checked) => toggleParticipant(r.key, p.id, checked === true)}
+                  />
+                  <Label htmlFor={`${r.key}-${p.id}`} className="text-xs font-normal">
+                    {p.last_name} {p.first_name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LodgingConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
+  const lodgingRequest = firstOrNull(item.lodging_request);
+  const existing = item.room_assignment ?? [];
+  const participants = item.delegation?.participant ?? [];
+  const [rooms, setRooms] = useState<RoomDraft[]>(() => {
+    if (existing.length > 0) return existing.map((r, i) => toRoomDraft(r, `existing-${i}`));
+    return [emptyRoomDraft()];
+  });
+
+  return (
+    <form action={saveRoomAssignments} onSubmit={onClose} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto">
+      <input type="hidden" name="id" value={item.id} />
+      <input type="hidden" name="rooms" value={JSON.stringify(rooms)} />
+
+      {lodgingRequest && (
+        <div className="rounded-md bg-muted/50 p-3 text-sm">
+          <p className="font-medium">대리인 요청 내용</p>
+          <p className="text-muted-foreground">
+            체크인 희망 {lodgingRequest.check_in_preferred_date ?? "미정"} · 체크아웃 희망 {lodgingRequest.check_out_preferred_date ?? "미정"}
+          </p>
+          {lodgingRequest.room_grouping_note && <p className="text-muted-foreground">객실 구성: {lodgingRequest.room_grouping_note}</p>}
+          {lodgingRequest.note && <p className="text-muted-foreground">특이 요청: {lodgingRequest.note}</p>}
+        </div>
+      )}
+
+      <RoomEditor rooms={rooms} onChange={setRooms} participants={participants} />
+
+      <DialogFooter>
+        <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
+        <Button type="submit">확정</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 function GenericConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: () => void }) {
   return (
     <form action={confirmServiceItem} onSubmit={onClose}>
@@ -298,6 +496,8 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
         </DialogHeader>
         {item.service_type === "FLIGHT" ? (
           <FlightConfirmForm item={item} onClose={close} />
+        ) : item.service_type === "LODGING" ? (
+          <LodgingConfirmForm item={item} onClose={close} />
         ) : (
           <GenericConfirmForm item={item} onClose={close} />
         )}

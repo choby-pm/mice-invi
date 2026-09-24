@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { submitServiceRequest } from "@/server/modules/service-item/portal-actions";
 import { saveFlightRequest } from "@/server/modules/service-item/flight-actions";
+import { saveLodgingRequest } from "@/server/modules/service-item/lodging-actions";
 import {
   SERVICE_TYPES,
   SERVICE_TYPE_COLUMN_LABELS,
@@ -26,6 +27,13 @@ interface FlightRequestRow {
   note: string | null;
 }
 
+interface LodgingRequestRow {
+  check_in_preferred_date: string | null;
+  check_out_preferred_date: string | null;
+  room_grouping_note: string | null;
+  note: string | null;
+}
+
 interface ServiceItemRow {
   id: string;
   service_type: string;
@@ -33,6 +41,7 @@ interface ServiceItemRow {
   note: string | null;
   scheduled_at: string | null;
   flight_request?: FlightRequestRow | FlightRequestRow[] | null;
+  lodging_request?: LodgingRequestRow | LodgingRequestRow[] | null;
 }
 
 function firstOrNull<T>(v: T | T[] | null | undefined): T | null {
@@ -113,13 +122,61 @@ function FlightRequestFields({ item, flightRequest }: { item: ServiceItemRow; fl
   );
 }
 
+function LodgingRequestFields({ item, lodgingRequest }: { item: ServiceItemRow; lodgingRequest: LodgingRequestRow | null }) {
+  const idOf = (name: string) => `${name}-${item.id}`;
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("checkInPreferredDate")}>체크인 희망일</Label>
+          <Input
+            id={idOf("checkInPreferredDate")}
+            name="checkInPreferredDate"
+            type="date"
+            defaultValue={lodgingRequest?.check_in_preferred_date ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("checkOutPreferredDate")}>체크아웃 희망일</Label>
+          <Input
+            id={idOf("checkOutPreferredDate")}
+            name="checkOutPreferredDate"
+            type="date"
+            defaultValue={lodgingRequest?.check_out_preferred_date ?? ""}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={idOf("roomGroupingNote")}>객실 구성 (누가 같은 방을 쓰는지)</Label>
+        <Textarea
+          id={idOf("roomGroupingNote")}
+          name="roomGroupingNote"
+          defaultValue={lodgingRequest?.room_grouping_note ?? ""}
+          placeholder="예: VIP + 배우자 동숙, 수행원 2명 별도 트윈룸"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={idOf("note")}>특이 요청</Label>
+        <Textarea
+          id={idOf("note")}
+          name="note"
+          defaultValue={lodgingRequest?.note ?? ""}
+          placeholder="얼리 체크인, 금연룸 등"
+        />
+      </div>
+    </>
+  );
+}
+
 function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; revalidateTo: string }) {
   const [open, setOpen] = useState(false);
   const typeInfo = SERVICE_TYPES.find((t) => t.value === item.service_type);
   const columns = SERVICE_TYPE_COLUMN_LABELS[item.service_type];
   const submitted = item.status !== "DRAFT";
   const isFlight = item.service_type === "FLIGHT";
+  const isLodging = item.service_type === "LODGING";
   const flightRequest = firstOrNull(item.flight_request);
+  const lodgingRequest = firstOrNull(item.lodging_request);
 
   return (
     <Card>
@@ -140,6 +197,16 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
             <input type="hidden" name="serviceItemId" value={item.id} />
             <input type="hidden" name="revalidateTo" value={revalidateTo} />
             <FlightRequestFields item={item} flightRequest={flightRequest} />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>취소</Button>
+              <Button type="submit" size="sm">{submitted ? "저장" : "요청 제출"}</Button>
+            </div>
+          </form>
+        ) : isLodging ? (
+          <form action={saveLodgingRequest} onSubmit={() => setOpen(false)} className="flex flex-col gap-3">
+            <input type="hidden" name="serviceItemId" value={item.id} />
+            <input type="hidden" name="revalidateTo" value={revalidateTo} />
+            <LodgingRequestFields item={item} lodgingRequest={lodgingRequest} />
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>취소</Button>
               <Button type="submit" size="sm">{submitted ? "저장" : "요청 제출"}</Button>

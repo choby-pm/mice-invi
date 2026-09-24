@@ -6,7 +6,7 @@ export default async function VendorHomePage() {
   const { data: items } = await supabase
     .from("service_item")
     .select(
-      "id, service_type, status, note, confirmation_note, scheduled_at, delegation:delegation_id(name, event:event_id(name)), flight_request(*), flight_segment(*)",
+      "id, service_type, status, note, confirmation_note, scheduled_at, delegation:delegation_id(id, name, event:event_id(name), participant(id, first_name, last_name, participant_type)), flight_request(*), flight_segment(*), lodging_request(*), room_assignment(*)",
     )
     .in("status", ["REQUESTED", "IN_PROGRESS", "CONFIRMED"])
     .order("status");

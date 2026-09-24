@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { createParticipant } from "@/server/modules/participant/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { createParticipant, deleteParticipant } from "@/server/modules/participant/actions";
 import {
   saveParticipantSensitive,
   viewParticipantSensitive,
@@ -222,9 +233,11 @@ function SensitiveInfoSheet({
 }
 
 function ParticipantRowItem({
+  delegationId,
   revalidateTo,
   participant,
 }: {
+  delegationId: string;
   revalidateTo: string;
   participant: ParticipantRow;
 }) {
@@ -234,9 +247,33 @@ function ParticipantRowItem({
       <span>
         {participant.last_name} {participant.first_name} · {PARTICIPANT_TYPE_LABEL[participant.participant_type]}
       </span>
-      <Button variant="ghost" size="sm" onClick={() => setSheetOpen(true)}>
-        🔒 민감정보
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={() => setSheetOpen(true)}>
+          🔒 민감정보
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+            <X className="size-4" />
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{participant.last_name} {participant.first_name}을(를) 삭제할까요?</AlertDialogTitle>
+              <AlertDialogDescription>
+                되돌릴 수 없습니다. 이미 진행 중인 서비스가 있으면 인원 변경 조정 항목이 자동으로 생성됩니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <form action={deleteParticipant}>
+                <input type="hidden" name="id" value={participant.id} />
+                <input type="hidden" name="delegationId" value={delegationId} />
+                <input type="hidden" name="revalidateTo" value={revalidateTo} />
+                <AlertDialogAction type="submit" variant="destructive">삭제</AlertDialogAction>
+              </form>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
       <SensitiveInfoSheet
         revalidateTo={revalidateTo}
         participant={participant}
@@ -274,7 +311,7 @@ export function ParticipantList({
       ) : (
         <ul className="divide-y rounded-lg border">
           {participants.map((p) => (
-            <ParticipantRowItem key={p.id} revalidateTo={revalidateTo} participant={p} />
+            <ParticipantRowItem key={p.id} delegationId={delegationId} revalidateTo={revalidateTo} participant={p} />
           ))}
         </ul>
       )}

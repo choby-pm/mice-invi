@@ -5,6 +5,7 @@ import { ParticipantList } from "@/components/console/participant-list";
 import { ConsentChecklist } from "@/components/portal/consent-checklist";
 import { RsvpBanner } from "@/components/portal/rsvp-banner";
 import { ServiceRequestList } from "@/components/portal/service-request-list";
+import { ProgramList } from "@/components/portal/program-list";
 import { getConsentChecklist } from "@/server/modules/consent/portal-actions";
 import { BlankScreen } from "@/components/shared/blank-screen";
 
@@ -24,7 +25,7 @@ export default async function PortalDelegationPage({
 
   const revalidateTo = `/portal/delegation/${delegationId}`;
 
-  const [{ data: participants }, { data: serviceItems }] = await Promise.all([
+  const [{ data: participants }, { data: serviceItems }, { data: programs }] = await Promise.all([
     supabase
       .from("participant")
       .select("id, first_name, last_name, participant_type")
@@ -35,6 +36,11 @@ export default async function PortalDelegationPage({
       .select("id, service_type, status, note, scheduled_at, flight_request(*), lodging_request(*), dietary_requirement(*)")
       .eq("delegation_id", delegationId)
       .order("service_type"),
+    supabase
+      .from("program")
+      .select("id, name, program_type, start_at, venue, status, program_attendance(id, status, participant:participant_id(id, first_name, last_name))")
+      .eq("event_id", delegation.event_id)
+      .order("start_at", { ascending: true, nullsFirst: false }),
   ]);
 
   const declined = delegation.rsvp === "DECLINED";
@@ -93,6 +99,8 @@ export default async function PortalDelegationPage({
           {serviceItems && serviceItems.length > 0 && (
             <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
           )}
+
+          <ProgramList programs={(programs ?? []) as never} revalidateTo={revalidateTo} />
         </>
       )}
     </div>

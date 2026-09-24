@@ -32,9 +32,10 @@ export default async function EventLayout({
 }) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
-  const [{ data: event }, { data: { user } }] = await Promise.all([
+  const [{ data: event }, { data: { user } }, { count: openIssueCount }] = await Promise.all([
     supabase.from("event").select("id, name, status").eq("id", id).single(),
     supabase.auth.getUser(),
+    supabase.from("change_issue").select("id", { count: "exact", head: true }).eq("event_id", id).in("status", ["OPEN", "IN_PROGRESS"]),
   ]);
   if (!event) notFound();
 
@@ -43,7 +44,7 @@ export default async function EventLayout({
     { href: `/console/events/${id}/delegations`, label: "대표단", icon: Users },
     { href: `/console/events/${id}/consent`, label: "동의서", icon: FileCheck2 },
     { href: `/console/events/${id}/services`, label: "서비스 현황", icon: ClipboardList },
-    { href: `/console/events/${id}/issues`, label: "변경 이슈", icon: AlertTriangle },
+    { href: `/console/events/${id}/issues`, label: "변경 이슈", icon: AlertTriangle, badge: openIssueCount || 0 },
     { href: `/console/events/${id}/roster`, label: "전체 명단", icon: Table2 },
     { href: `/console/events/${id}/vendors`, label: "업체", icon: Building2 },
   ];
@@ -75,6 +76,11 @@ export default async function EventLayout({
                     <SidebarMenuButton render={<Link href={item.href} />} tooltip={item.label}>
                       <item.icon />
                       <span>{item.label}</span>
+                      {"badge" in item && (item.badge ?? 0) > 0 && (
+                        <span className="ml-auto rounded-full bg-status-urgent-bg px-1.5 text-xs text-status-urgent-fg group-data-[collapsible=icon]:hidden">
+                          {item.badge}
+                        </span>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

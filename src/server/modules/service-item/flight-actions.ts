@@ -90,6 +90,14 @@ export async function saveFlightSegments(formData: FormData) {
 
   const supabase = await createServerSupabaseClient();
 
+  // 재확정 감지(R4 영향 엔진)를 위해 지우기 전에 이전 최종 도착/첫 출발 값을 기억해둡니다.
+  const { data: oldSegments } = await supabase
+    .from("flight_segment")
+    .select("direction, seq, arr_at, arr_airport, dep_at, dep_airport, is_final_arrival")
+    .eq("service_item_id", serviceItemId);
+  const oldFinalArrival = (oldSegments ?? []).find((s) => s.direction === "INBOUND" && s.is_final_arrival);
+  const oldFirstDeparture = (oldSegments ?? []).find((s) => s.direction === "OUTBOUND" && s.seq === 1);
+
   await supabase.from("flight_segment").delete().eq("service_item_id", serviceItemId);
 
   const byDirection: Record<string, FlightSegmentInput[]> = { INBOUND: [], OUTBOUND: [] };
@@ -162,6 +170,20 @@ export async function saveFlightSegments(formData: FormData) {
       p_source_flight_segment_id: segId,
     });
   }
+
+  // 재확정으로 값이 크게 바뀌었으면 R4 영향 엔진이 이미 처리중인 수송·숙박·공항 의전에
+  // 조정 항목을 만듭니다(03 §1.5). 첫 확정이거나 사소한 변경이면 함수 안에서 알아서 아무것도 안 만듭니다.
+  await supabase.rpc("evaluate_flight_change_impact", {
+    p_flight_service_item_id: serviceItemId,
+    p_old_inbound_arr_at: oldFinalArrival?.arr_at ?? null,
+    p_old_inbound_arr_airport: oldFinalArrival?.arr_airport ?? null,
+    p_new_inbound_arr_at: finalArrival ? new Date(finalArrival.arrAt).toISOString() : null,
+    p_new_inbound_arr_airport: finalArrival?.arrAirport ?? null,
+    p_old_outbound_dep_at: oldFirstDeparture?.dep_at ?? null,
+    p_old_outbound_dep_airport: oldFirstDeparture?.dep_airport ?? null,
+    p_new_outbound_dep_at: firstDeparture ? new Date(firstDeparture.depAt).toISOString() : null,
+    p_new_outbound_dep_airport: firstDeparture?.depAirport ?? null,
+  });
 
   revalidatePath("/vendor");
 }

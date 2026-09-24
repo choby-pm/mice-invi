@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { submitServiceRequest } from "@/server/modules/service-item/portal-actions";
+import { saveFlightRequest } from "@/server/modules/service-item/flight-actions";
 import {
   SERVICE_TYPES,
   SERVICE_TYPE_COLUMN_LABELS,
@@ -15,12 +16,101 @@ import {
   SERVICE_STATUS_BADGE,
 } from "@/lib/service-item-constants";
 
+interface FlightRequestRow {
+  inbound_origin_city: string | null;
+  inbound_dest_airport: string | null;
+  inbound_preferred_date: string | null;
+  outbound_preferred_date: string | null;
+  outbound_origin_airport: string | null;
+  outbound_dest_city: string | null;
+  note: string | null;
+}
+
 interface ServiceItemRow {
   id: string;
   service_type: string;
   status: string;
   note: string | null;
   scheduled_at: string | null;
+  flight_request?: FlightRequestRow | FlightRequestRow[] | null;
+}
+
+function firstOrNull<T>(v: T | T[] | null | undefined): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
+function FlightRequestFields({ item, flightRequest }: { item: ServiceItemRow; flightRequest: FlightRequestRow | null }) {
+  const idOf = (name: string) => `${name}-${item.id}`;
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("inboundOriginCity")}>입국 출발 도시</Label>
+          <Input
+            id={idOf("inboundOriginCity")}
+            name="inboundOriginCity"
+            defaultValue={flightRequest?.inbound_origin_city ?? ""}
+            placeholder="예: 하노이"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("inboundDestAirport")}>입국 도착 공항</Label>
+          <Input
+            id={idOf("inboundDestAirport")}
+            name="inboundDestAirport"
+            defaultValue={flightRequest?.inbound_dest_airport ?? ""}
+            placeholder="예: ICN"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("inboundPreferredDate")}>희망 입국일</Label>
+          <Input
+            id={idOf("inboundPreferredDate")}
+            name="inboundPreferredDate"
+            type="date"
+            defaultValue={flightRequest?.inbound_preferred_date ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("outboundPreferredDate")}>희망 귀국일</Label>
+          <Input
+            id={idOf("outboundPreferredDate")}
+            name="outboundPreferredDate"
+            type="date"
+            defaultValue={flightRequest?.outbound_preferred_date ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("outboundOriginAirport")}>귀국 출발 공항</Label>
+          <Input
+            id={idOf("outboundOriginAirport")}
+            name="outboundOriginAirport"
+            defaultValue={flightRequest?.outbound_origin_airport ?? ""}
+            placeholder="예: ICN"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={idOf("outboundDestCity")}>귀국 도착 도시</Label>
+          <Input
+            id={idOf("outboundDestCity")}
+            name="outboundDestCity"
+            defaultValue={flightRequest?.outbound_dest_city ?? ""}
+            placeholder="예: 하노이"
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={idOf("note")}>요청 메모</Label>
+        <Textarea
+          id={idOf("note")}
+          name="note"
+          defaultValue={flightRequest?.note ?? ""}
+          placeholder="선호 항공사, 시간대 등"
+        />
+      </div>
+    </>
+  );
 }
 
 function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; revalidateTo: string }) {
@@ -28,6 +118,8 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
   const typeInfo = SERVICE_TYPES.find((t) => t.value === item.service_type);
   const columns = SERVICE_TYPE_COLUMN_LABELS[item.service_type];
   const submitted = item.status !== "DRAFT";
+  const isFlight = item.service_type === "FLIGHT";
+  const flightRequest = firstOrNull(item.flight_request);
 
   return (
     <Card>
@@ -43,6 +135,16 @@ function ServiceRequestCard({ item, revalidateTo }: { item: ServiceItemRow; reva
               {submitted ? "요청 내용 수정" : "요청 입력"}
             </Button>
           </div>
+        ) : isFlight ? (
+          <form action={saveFlightRequest} onSubmit={() => setOpen(false)} className="flex flex-col gap-3">
+            <input type="hidden" name="serviceItemId" value={item.id} />
+            <input type="hidden" name="revalidateTo" value={revalidateTo} />
+            <FlightRequestFields item={item} flightRequest={flightRequest} />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>취소</Button>
+              <Button type="submit" size="sm">{submitted ? "저장" : "요청 제출"}</Button>
+            </div>
+          </form>
         ) : (
           <form
             action={submitServiceRequest}

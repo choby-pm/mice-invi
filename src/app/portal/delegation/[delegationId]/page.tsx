@@ -32,7 +32,7 @@ export default async function PortalDelegationPage({
       .order("sort_order", { ascending: true }),
     supabase
       .from("service_item")
-      .select("id, service_type, status, note, scheduled_at")
+      .select("id, service_type, status, note, scheduled_at, flight_request(*)")
       .eq("delegation_id", delegationId)
       .order("service_type"),
   ]);

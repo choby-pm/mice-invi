@@ -4,6 +4,10 @@ MICE 행사에 초청되는 해외 VIP와 동반자·수행원을 관리하는 S
 
 > **핵심 가치**: 잦은 변경이 2차·3차·4차로 번지는 연쇄를 시스템이 추적하고, "업체에 알렸다"가 아니라 "업체가 반영했다"까지 확인한다.
 
+## 데모 테스트
+
+기능별 목업 데이터와 계정 생성 방법은 [데모 데이터 안내](docs/demo-data.md)를 참고하세요. `npm run seed:demo`로 미리보기, `npm run seed:demo -- --apply`로 DB에 생성합니다.
+
 ## 문서 지도
 
 > **Claude Code로 이 폴더를 열었다면** `CLAUDE.md` → `docs/08_claude_code_handoff.md` 순서로 읽으세요.

@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed:dev": "node scripts/seed-dev-accounts.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "test:demo": "node --test scripts/demo-data.test.mjs",
     "portal:otp": "node scripts/get-portal-otp.mjs"
   },
   "dependencies": {

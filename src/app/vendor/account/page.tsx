@@ -12,16 +12,14 @@ export default async function VendorAccountPage() {
       <CardHeader><CardTitle>{m.vendor.name}</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm">내 역할: {m.role === "ADMIN" ? "업체 관리자" : "업체 직원"}</p>
-        <h2 className="text-sm font-medium">담당 행사</h2>
-        {assignments.filter((a) => a.vendor_id === m.vendor.id).map((a) => {
-          const event = a.event as unknown as { id: string; name: string; status: string } | null;
-          return <div key={a.id} className="rounded-md border p-3 text-sm">
-            <p>{event?.name ?? "행사 정보 없음"}{event?.status === "CLOSED" && " · 종료"}</p>
-            <p className="text-muted-foreground">{a.service_types.map((t: string) => SERVICE_TYPES.find((s) => s.value === t)?.label ?? t).join(" · ")}</p>
-          </div>;
-        })}
       </CardContent>
     </Card>)}
+    <h2 className="font-medium">서비스가 등록된 담당 행사</h2>
+    {assignments.map((a) => <div key={a.id} className="rounded-md border p-3 text-sm">
+      <p>{a.event?.name ?? "행사 정보 없음"}{a.event?.status === "CLOSED" && " · 종료"}</p>
+      <p className="text-muted-foreground">{a.service_types.map((t) => SERVICE_TYPES.find((s) => s.value === t)?.label ?? t).join(" · ")}</p>
+    </div>)}
+    {assignments.length === 0 && <p className="text-sm text-muted-foreground">아직 등록된 담당 서비스가 없습니다.</p>}
     {memberships.length === 0 && <p className="text-sm">연결된 업체가 없습니다. PCO 담당자에게 업체 배정을 요청해 주세요.</p>}
     <Link className="text-sm underline" href="/vendor/history">처리 내역 보기</Link>
   </div>;

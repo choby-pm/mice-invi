@@ -6,6 +6,8 @@ import { formatDateTime } from "@/lib/date";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ServiceDetailDialog } from "@/components/shared/service-detail-dialog";
+import { SERVICE_DETAILS_SELECT } from "@/lib/service-detail-query";
 
 const PROCESSED = ["CONFIRMED", "NOTIFIED", "CANCELLED", "NOT_APPLICABLE"];
 
@@ -13,7 +15,7 @@ export default async function VendorHistoryPage({ searchParams }: { searchParams
   const { status } = await searchParams;
   const { supabase, memberships, assignments, flightDemo } = await getVendorContext();
   const results = assignments.length ? await Promise.all([
-    supabase.from("service_item").select("id, service_type, status, confirmation_note, confirmed_at, delegation:delegation_id(name, event:event_id(name)), flight_segment(id, direction, seq, flight_no, dep_airport, arr_airport, dep_at, arr_at, ticket_status)")
+    supabase.from("service_item").select(SERVICE_DETAILS_SELECT)
       .in("event_vendor_id", assignments.map((a) => a.id)).in("status", PROCESSED.includes(status ?? "") ? [status!] : PROCESSED)
       .order("confirmed_at", { ascending: false, nullsFirst: false }).limit(100),
     supabase.from("adjustment_item").select("id, instruction, status, resolution_note, resolved_at")
@@ -25,7 +27,7 @@ export default async function VendorHistoryPage({ searchParams }: { searchParams
   const adjustments = results[1]?.data ?? [];
 
   return <div className="space-y-4">
-    <h1 className="text-lg font-semibold">{flightDemo ? "항공 업체 · 처리 내역" : "처리 내역"}</h1>
+    <h1 className="text-2xl font-semibold tracking-tight">{flightDemo ? "항공 처리 내역" : "처리 내역"}</h1>
     <p className="text-sm text-muted-foreground">확정·취소·지원 제외된 서비스와 완료된 조정 결과를 각각 최근 100건까지 표시합니다.</p>
     <form className="flex items-center gap-2">
       <label htmlFor="history-status" className="text-sm">서비스 상태</label>
@@ -44,6 +46,7 @@ export default async function VendorHistoryPage({ searchParams }: { searchParams
         <CardContent className="space-y-2 text-sm">
           <p className="text-muted-foreground">{d?.event?.name}{item.confirmed_at && ` · ${formatDateTime(item.confirmed_at, "ko")}`}</p>
           <p className="whitespace-pre-wrap">{item.confirmation_note || "추가 처리 메모 없음"}</p>
+          <ServiceDetailDialog item={item as never} />
           {item.flight_segment?.toSorted((a, b) => a.dep_at.localeCompare(b.dep_at)).map((f) => <div key={f.id} className="rounded-md border p-3">
             <p>{f.direction === "INBOUND" ? "입국" : "귀국"} · {f.flight_no} · {f.dep_airport} → {f.arr_airport} · {f.ticket_status === "TICKETED" ? "발권" : f.ticket_status === "CANCELLED" ? "취소" : "예약"}</p>
             <p className="text-muted-foreground">{formatDateTime(f.dep_at, "ko")} → {formatDateTime(f.arr_at, "ko")}</p>

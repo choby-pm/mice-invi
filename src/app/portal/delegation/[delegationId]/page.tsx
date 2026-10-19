@@ -8,6 +8,7 @@ import { ServiceRequestList } from "@/components/portal/service-request-list";
 import { ProgramList } from "@/components/portal/program-list";
 import { getConsentChecklist } from "@/server/modules/consent/portal-actions";
 import { BlankScreen } from "@/components/shared/blank-screen";
+import { SERVICE_DETAILS_SELECT } from "@/lib/service-detail-query";
 
 export default async function PortalDelegationPage({
   params,
@@ -33,7 +34,7 @@ export default async function PortalDelegationPage({
       .order("sort_order", { ascending: true }),
     supabase
       .from("service_item")
-      .select("id, service_type, status, note, scheduled_at, flight_request(*), lodging_request(*), dietary_requirement(*)")
+      .select(SERVICE_DETAILS_SELECT)
       .eq("delegation_id", delegationId)
       .order("service_type"),
     supabase
@@ -98,7 +99,7 @@ export default async function PortalDelegationPage({
 
           {serviceItems && serviceItems.length > 0 && (
             <section id="flight" className="scroll-mt-4">
-              <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
+              <ServiceRequestList items={serviceItems as never} participants={participants ?? []} revalidateTo={revalidateTo} />
             </section>
           )}
 

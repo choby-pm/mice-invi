@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ServiceDetailDialog } from "@/components/shared/service-detail-dialog";
+import { serviceSummary } from "@/components/shared/service-details";
+import { Plus, X, Search, Users, CalendarDays, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,14 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -95,7 +90,7 @@ interface ParticipantOption {
 }
 
 interface TransferRequestRow {
-  direction: "INBOUND" | "OUTBOUND";
+  direction: "INBOUND" | "OUTBOUND" | "PROGRAM";
   from_text: string;
   to_text: string;
   scheduled_at: string | null;
@@ -140,6 +135,8 @@ export interface VendorTaskRow {
   note: string | null;
   confirmation_note: string | null;
   scheduled_at: string | null;
+  confirmed_at?: string | null;
+  support_type?: string | null;
   delegation: { name: string; event: { name: string } | null; participant?: ParticipantOption[] } | null;
   flight_request?: FlightRequestRow | FlightRequestRow[] | null;
   flight_segment?: FlightSegmentRow[] | null;
@@ -811,7 +808,7 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
   const close = () => onOpenChange(false);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>확정 정보 입력</DialogTitle>
         </DialogHeader>
@@ -833,40 +830,51 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
   );
 }
 
-function TaskRow({ item }: { item: VendorTaskRow }) {
+function TaskRow({ item, readOnly }: { item: VendorTaskRow; readOnly: boolean }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   return (
-    <TableRow>
-      <TableCell className="text-muted-foreground">{item.delegation?.event?.name}</TableCell>
-      <TableCell>{item.delegation?.name}</TableCell>
-      <TableCell>{SERVICE_TYPE_LABEL[item.service_type]}</TableCell>
-      <TableCell>
-        <StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge>
-      </TableCell>
-      <TableCell className="max-w-48 truncate text-muted-foreground">{item.note ?? "-"}</TableCell>
-      <TableCell className="text-muted-foreground">
-        {item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "-"}
-      </TableCell>
-      <TableCell>
-        {item.status === "REQUESTED" && (
+    <article className="rounded-xl border bg-background shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+        <div className="min-w-0"><p className="mb-1 text-xs text-muted-foreground">{item.delegation?.event?.name}</p><h3 className="text-base font-semibold">{item.delegation?.name}</h3></div>
+        <div className="flex items-center gap-2"><span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">{SERVICE_TYPE_LABEL[item.service_type]}</span><StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge></div>
+      </div>
+      <div className="grid items-center gap-5 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div className="min-w-0"><p className="mb-2 text-xs font-medium text-muted-foreground">요청 여정 · 주요 내용</p><p className="break-words text-base font-semibold leading-7">{serviceSummary(item)}</p>{item.flight_request && <p className="mt-1 text-sm text-muted-foreground">{firstOrNull(item.flight_request)?.note || "추가 요청 메모 없음"}</p>}</div>
+        <div className="space-y-2 text-sm"><p className="flex items-start gap-2"><CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" />{item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "희망 일정 미입력"}</p><p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" />참가자 {item.delegation?.participant?.length ?? 0}명</p></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ServiceDetailDialog item={item} />
+          {!readOnly && item.status === "REQUESTED" && (
           <form action={startServiceItem}>
             <input type="hidden" name="id" value={item.id} />
-            <Button type="submit" size="sm" variant="outline">착수</Button>
+            <Button type="submit" size="sm">업무 시작</Button>
           </form>
         )}
-        {item.status === "IN_PROGRESS" && (
-          <Button size="sm" onClick={() => setConfirmOpen(true)}>확정 입력</Button>
+        {!readOnly && ["IN_PROGRESS", "CHANGING", "CONFIRMED", "NOTIFIED"].includes(item.status) && (
+          <Button size="sm" onClick={() => setConfirmOpen(true)}>{["CONFIRMED", "NOTIFIED"].includes(item.status) ? "확정 내용 수정" : "확정 입력"}</Button>
         )}
-        {item.status === "CONFIRMED" && item.confirmation_note && (
-          <span className="text-xs text-muted-foreground">{item.confirmation_note}</span>
-        )}
-      </TableCell>
-      <ConfirmDialog item={item} open={confirmOpen} onOpenChange={setConfirmOpen} />
-    </TableRow>
+        </div>
+      </div>
+      {!readOnly && <ConfirmDialog item={item} open={confirmOpen} onOpenChange={setConfirmOpen} />}
+    </article>
   );
 }
 
-export function TaskList({ items }: { items: VendorTaskRow[] }) {
+export function TaskList({ items, readOnly = false }: { items: VendorTaskRow[]; readOnly?: boolean }) {
+  const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("ALL");
+  const [refreshing, startRefresh] = useTransition();
+  const router = useRouter();
+  const groups = [
+    { key: "ALL", label: "전체 업무", states: null },
+    { key: "ACTION", label: "확인 필요", states: ["REQUESTED", "CHANGING", "CANCEL_REQ"] },
+    { key: "PROGRESS", label: "처리 중", states: ["IN_PROGRESS"] },
+    { key: "DONE", label: "확정 완료", states: ["CONFIRMED", "NOTIFIED"] },
+  ];
+  const selected = groups.find((g) => g.key === group)!;
+  const priority: Record<string, number> = { CHANGING: 0, CANCEL_REQ: 1, REQUESTED: 2, IN_PROGRESS: 3, CONFIRMED: 4, NOTIFIED: 5 };
+  const visible = items.filter((item) => (!selected.states || selected.states.includes(item.status)) &&
+    `${item.delegation?.name} ${item.delegation?.event?.name} ${serviceSummary(item)} ${item.note} ${firstOrNull(item.flight_request)?.note ?? ""} ${(item.flight_segment ?? []).map((f) => f.flight_no).join(" ")}`.toLowerCase().includes(query.trim().toLowerCase()))
+    .toSorted((a, b) => (priority[a.status] ?? 9) - (priority[b.status] ?? 9));
   if (items.length === 0) {
     return (
       <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
@@ -875,24 +883,13 @@ export function TaskList({ items }: { items: VendorTaskRow[] }) {
     );
   }
 
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>행사</TableHead>
-          <TableHead>대표단</TableHead>
-          <TableHead>분야</TableHead>
-          <TableHead>상태</TableHead>
-          <TableHead>요청 내용</TableHead>
-          <TableHead>희망 시각</TableHead>
-          <TableHead className="w-32" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item) => (
-          <TaskRow key={item.id} item={item} />
-        ))}
-      </TableBody>
-    </Table>
-  );
+  return <div className="space-y-5">
+    {!readOnly && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{groups.map((g) => <button key={g.key} type="button" onClick={() => setGroup(g.key)} aria-pressed={group === g.key} className={`rounded-xl border bg-background p-4 text-left transition-colors hover:border-primary/50 ${group === g.key ? "border-primary ring-1 ring-primary" : ""}`}><span className="text-sm text-muted-foreground">{g.label}</span><span className="mt-2 block text-3xl font-semibold tabular-nums">{items.filter((i) => !g.states || g.states.includes(i.status)).length}</span></button>)}</div>}
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
+      <div className="relative w-full sm:max-w-md"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="대표단·노선·편명 검색" placeholder="대표단, 노선 또는 편명으로 검색" className="h-10 pl-9" /></div>
+      <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground">{visible.length}건</span><Button variant="outline" size="sm" disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />새로고침</Button></div>
+    </div>
+    <div className="space-y-4">{visible.map((item) => <TaskRow key={item.id} item={item} readOnly={readOnly} />)}</div>
+    {visible.length === 0 && <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">조건에 맞는 업무가 없습니다.</p>}
+  </div>;
 }

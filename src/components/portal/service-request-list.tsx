@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ServiceDetailDialog } from "@/components/shared/service-detail-dialog";
+import type { ServiceDetailsItem } from "@/components/shared/service-details";
 import { submitServiceRequest } from "@/server/modules/service-item/portal-actions";
 import { saveFlightRequest } from "@/server/modules/service-item/flight-actions";
 import { saveLodgingRequest } from "@/server/modules/service-item/lodging-actions";
@@ -64,7 +66,7 @@ interface ParticipantOption {
   last_name: string;
 }
 
-interface ServiceItemRow {
+interface ServiceItemRow extends ServiceDetailsItem {
   id: string;
   service_type: string;
   status: string;
@@ -296,6 +298,7 @@ function ServiceRequestCard({
         <StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3"><ServiceDetailDialog item={item} />{item.confirmation_note && <p className="text-sm leading-6">업체 처리 결과: {item.confirmation_note}</p>}</div>
         {isTransfer ? (
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
             {item.note ?? "항공편이 확정되면 자동으로 생성됩니다."}

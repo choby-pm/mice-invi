@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ServiceDetailDialog } from "@/components/shared/service-detail-dialog";
+import type { ServiceDetailsItem } from "@/components/shared/service-details";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -56,7 +58,7 @@ interface AirportRequestRow {
   note: string | null;
 }
 
-interface ServiceItemRow {
+interface ServiceItemRow extends ServiceDetailsItem {
   id: string;
   service_type: string;
   status: string;
@@ -218,6 +220,7 @@ function ServiceItemTableRow({ item, eventId }: { item: ServiceItemRow; eventId:
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
+          <ServiceDetailDialog item={item} />
           {item.service_type === "AIRPORT" && (
             <Button type="button" variant="ghost" size="sm" onClick={() => setScopeOpen(true)}>
               의전 범위

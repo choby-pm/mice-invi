@@ -11,6 +11,15 @@
     "schedule": "Schedule",
     "messages": "Messages"
   },
+  "inbox": {
+    "title": "Inbox",
+    "description": "View current published notices for your events and adjustment requests for your delegation's own schedules.",
+    "notice": "Event notice",
+    "adjustment": "Schedule adjustment request",
+    "empty": "No notices to display.",
+    "open": "View details",
+    "scheduleTime": "Scheduled time"
+  },
   "portal": {
     "selectDelegation": "Select a delegation to open this section.",
     "noDelegations": "No delegations assigned",

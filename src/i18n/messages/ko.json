@@ -11,6 +11,15 @@
     "schedule": "일정",
     "messages": "메시지"
   },
+  "inbox": {
+    "title": "메시지함",
+    "description": "담당 행사에서 게시한 현재 안내문과 대표단 자체 일정의 조정 요청을 확인합니다.",
+    "notice": "행사 안내",
+    "adjustment": "일정 조정 요청",
+    "empty": "도착한 안내가 없습니다.",
+    "open": "관련 내용 확인",
+    "scheduleTime": "일정 시각"
+  },
   "portal": {
     "selectDelegation": "대표단을 선택하면 해당 항목으로 이동합니다.",
     "noDelegations": "배정된 대표단이 없습니다",

@@ -48,6 +48,7 @@ export default async function EventLayout({
     { href: `/console/events/${id}/issues`, label: "변경 이슈", icon: AlertTriangle, badge: openIssueCount || 0 },
     { href: `/console/events/${id}/roster`, label: "전체 명단", icon: Table2 },
     { href: `/console/events/${id}/vendors`, label: "업체", icon: Building2 },
+    { href: `/console/settings?eventId=${id}`, label: "행사 설정", icon: FileCheck2 },
   ];
 
   return (

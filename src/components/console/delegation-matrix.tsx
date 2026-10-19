@@ -22,7 +22,7 @@ interface VehicleDispatchRow {
   participant_ids: string[];
 }
 interface TransferRequestRow {
-  direction: "INBOUND" | "OUTBOUND";
+  direction: "INBOUND" | "OUTBOUND" | "PROGRAM";
   participant_ids: string[];
 }
 
@@ -49,7 +49,7 @@ function firstOrNull<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v;
 }
 
-function Cell({ items, participantId }: { items: MatrixServiceItem[]; participantId: string }) {
+export function ServiceCell({ items, participantId }: { items: MatrixServiceItem[]; participantId: string }) {
   if (items.length === 0) {
     return <span className="text-xs text-muted-foreground">-</span>;
   }
@@ -66,7 +66,7 @@ function Cell({ items, participantId }: { items: MatrixServiceItem[]; participan
           if (!inDispatch && !inRequest) return null;
           return (
             <div key={item.id} className="flex items-center gap-1 text-xs">
-              <span className="text-muted-foreground">{tr?.direction === "INBOUND" ? "입국" : "귀국"}</span>
+              <span className="text-muted-foreground">{tr?.direction === "INBOUND" ? "입국" : tr?.direction === "OUTBOUND" ? "귀국" : "일정"}</span>
               <StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge>
             </div>
           );
@@ -127,7 +127,7 @@ export function DelegationMatrix({
               </TableCell>
               {SERVICE_TYPES.map((t) => (
                 <TableCell key={t.value}>
-                  <Cell items={byType[t.value] ?? []} participantId={p.id} />
+                  <ServiceCell items={byType[t.value] ?? []} participantId={p.id} />
                 </TableCell>
               ))}
             </TableRow>

@@ -17,16 +17,17 @@ export async function getDemoAccount(role: DemoRole) {
   else query = admin.from("tenant_member").select("user_id").eq("tenant_id", tenantId).eq("role", PCO_ROLES[role]);
   const { data: member, error } = await query.single();
   if (error || !member) throw new Error("데모 계정이 준비되지 않았습니다. 데모 데이터 생성을 먼저 완료해 주세요.");
-  const { data, error: userError } = await admin.auth.admin.getUserById(member.user_id);
-  if (userError || !data.user) throw new Error("데모 계정을 확인할 수 없습니다.");
-  const scopes = await Promise.all([
-    admin.from("tenant_member").select("tenant_id, role").eq("user_id", data.user.id),
-    admin.from("vendor_member").select("vendor_id").eq("user_id", data.user.id),
-    admin.from("delegation_proxy").select("delegation_id").eq("user_id", data.user.id),
+  const [account, ...scopes] = await Promise.all([
+    admin.auth.admin.getUserById(member.user_id),
+    admin.from("tenant_member").select("tenant_id, role").eq("user_id", member.user_id),
+    admin.from("vendor_member").select("vendor_id").eq("user_id", member.user_id),
+    admin.from("delegation_proxy").select("delegation_id").eq("user_id", member.user_id),
   ]);
+  if (account.error || !account.data.user) throw new Error("데모 계정을 확인할 수 없습니다.");
+  const user = account.data.user;
   if (scopes.some((scope) => scope.error)) throw new Error("데모 계정의 접근 범위를 확인할 수 없습니다.");
-  assertDemoAccount(role, data.user, scopes[0].data ?? [], scopes[1].data ?? [], scopes[2].data ?? []);
-  return { admin, email: data.user.email! };
+  assertDemoAccount(role, user, scopes[0].data ?? [], scopes[1].data ?? [], scopes[2].data ?? []);
+  return { admin, email: user.email! };
 }
 
 export function assertDemoAccount(

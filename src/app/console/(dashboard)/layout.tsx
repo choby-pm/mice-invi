@@ -35,7 +35,7 @@ const NAV = [
 
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
   return (
     <SidebarProvider>
@@ -63,7 +63,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         </SidebarContent>
         <SidebarFooter className="px-3 py-3">
           <span className="mb-1 truncate text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-            {user?.email}
+            {data?.claims.email}
           </span>
           <form action={logOutPco}>
             <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2">

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DEMO_ROLES } from "@/lib/demo";
 import { demoLogin } from "@/server/auth/demo-login";
 import { mockLogin } from "@/server/auth/mock-login";
+import { DemoLoginButton } from "@/components/shared/demo-login-button";
 
 export function DemoLogin({ error }: { error?: string }) {
   return (
@@ -17,12 +18,7 @@ export function DemoLogin({ error }: { error?: string }) {
           {DEMO_ROLES.map((option) => (
             <form key={option.role} action={demoLogin}>
               <input type="hidden" name="role" value={option.role} />
-              <Button type="submit" variant="outline" className="h-auto w-full justify-start py-3">
-                <span className="flex flex-col items-start gap-1 whitespace-normal text-left">
-                  <span className="font-medium">{option.label}로 체험하기</span>
-                  <span className="text-xs text-muted-foreground">{option.description}</span>
-                </span>
-              </Button>
+              <DemoLoginButton label={option.label} description={option.description} />
             </form>
           ))}
           <form action={mockLogin}>

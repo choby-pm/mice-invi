@@ -32,9 +32,9 @@ export default async function EventLayout({
 }) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
-  const [{ data: event }, { data: { user } }, { count: openIssueCount }] = await Promise.all([
+  const [{ data: event }, { data: auth }, { count: openIssueCount }] = await Promise.all([
     supabase.from("event").select("id, name, status").eq("id", id).single(),
-    supabase.auth.getUser(),
+    supabase.auth.getClaims(),
     supabase.from("change_issue").select("id", { count: "exact", head: true }).eq("event_id", id).in("status", ["OPEN", "IN_PROGRESS"]),
   ]);
   if (!event) notFound();
@@ -91,7 +91,7 @@ export default async function EventLayout({
         </SidebarContent>
         <SidebarFooter className="px-3 py-3">
           <span className="mb-1 truncate text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-            {user?.email}
+            {auth?.claims.email}
           </span>
           <form action={logOutPco}>
             <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2">

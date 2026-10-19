@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-// 서버 컴포넌트·서버 액션에서 로그인한 사용자 권한으로 쓰는 클라이언트 (RLS 적용).
-// 실제 Supabase Auth 로그인(D-SY-10)이 붙는 R1부터 의미가 생깁니다.
-export async function createClient() {
+// 같은 렌더 요청에서만 재사용하며 사용자 간 세션은 공유하지 않습니다 (RLS 적용).
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -26,4 +26,4 @@ export async function createClient() {
       },
     },
   );
-}
+});

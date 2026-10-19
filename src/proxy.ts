@@ -33,8 +33,8 @@ function checkRealSession(request: NextRequest, loginPath: string) {
       },
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) {
       return NextResponse.redirect(new URL(loginPath, request.url));
     }
     return response;

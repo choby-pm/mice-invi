@@ -11,7 +11,7 @@ const NAV = [
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -27,7 +27,7 @@ export default async function VendorLayout({ children }: { children: React.React
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">{user?.email}</span>
+          <span className="text-xs text-muted-foreground">{data?.claims.email}</span>
           <form action={vendorLogout}>
             <Button type="submit" variant="ghost" size="sm">로그아웃</Button>
           </form>

@@ -97,16 +97,20 @@ export default async function PortalDelegationPage({
           )}
 
           {serviceItems && serviceItems.length > 0 && (
-            <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
+            <section id="flight" className="scroll-mt-4">
+              <ServiceRequestList items={serviceItems} participants={participants ?? []} revalidateTo={revalidateTo} />
+            </section>
           )}
 
-          <ProgramList
-            delegationId={delegationId}
-            eventId={delegation.event_id}
-            programs={(programs ?? []) as never}
-            participants={participants ?? []}
-            revalidateTo={revalidateTo}
-          />
+          <section id="schedule" className="scroll-mt-4">
+            <ProgramList
+              delegationId={delegationId}
+              eventId={delegation.event_id}
+              programs={(programs ?? []) as never}
+              participants={participants ?? []}
+              revalidateTo={revalidateTo}
+            />
+          </section>
         </>
       )}
     </div>

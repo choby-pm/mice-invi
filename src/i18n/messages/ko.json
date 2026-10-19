@@ -10,5 +10,10 @@
     "flight": "항공",
     "schedule": "일정",
     "messages": "메시지"
+  },
+  "portal": {
+    "selectDelegation": "대표단을 선택하면 해당 항목으로 이동합니다.",
+    "noDelegations": "배정된 대표단이 없습니다",
+    "assignmentHint": "PCO가 대표단에 초청하면 여기에 표시됩니다."
   }
 }

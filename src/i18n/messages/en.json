@@ -10,5 +10,10 @@
     "flight": "Flight",
     "schedule": "Schedule",
     "messages": "Messages"
+  },
+  "portal": {
+    "selectDelegation": "Select a delegation to open this section.",
+    "noDelegations": "No delegations assigned",
+    "assignmentHint": "Your delegations will appear here when the PCO invites you."
   }
 }

@@ -1,5 +1,5 @@
-import { BlankScreen } from "@/components/shared/blank-screen";
+import { DelegationLinks } from "@/components/portal/delegation-links";
 
 export default function PortalSchedulePage() {
-  return <BlankScreen title="내 일정" note="R5에서 구현합니다." />;
+  return <DelegationLinks section="schedule" />;
 }

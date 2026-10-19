@@ -1,4 +1,6 @@
 import { requestPortalOtp, verifyPortalOtp } from "@/server/modules/iam/portal-auth-actions";
+import { DemoLogin } from "@/components/shared/demo-login";
+import { isDemoMode } from "@/lib/demo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,7 @@ export default async function PortalLoginPage({
   searchParams: Promise<{ step?: string; email?: string; error?: string }>;
 }) {
   const { step, email, error } = await searchParams;
+  if (isDemoMode()) return <DemoLogin error={error} />;
   const isVerifyStep = step === "verify" && !!email;
 
   return (

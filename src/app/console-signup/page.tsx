@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isDemoMode } from "@/lib/demo";
 import { signUpPco } from "@/server/modules/iam/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +18,7 @@ export default async function ConsoleSignupPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  if (isDemoMode()) redirect("/login");
   const { error } = await searchParams;
 
   return (

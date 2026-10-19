@@ -1,12 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isDemoMode } from "@/lib/demo";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 // 대리인 로그인은 이메일 인증번호(OTP)입니다 (D-UX-03) — 비밀번호가 없습니다.
 // shouldCreateUser: false — PCO가 초청한 이메일만 로그인할 수 있고, 아무나 입력해서
 // 새 계정이 만들어지지 않습니다 (BR-04-1).
 export async function requestPortalOtp(formData: FormData) {
+  if (isDemoMode()) redirect("/login");
   const email = (formData.get("email") as string)?.trim();
   if (!email) redirect("/portal-login?error=" + encodeURIComponent("이메일을 입력하세요"));
 
@@ -19,6 +21,7 @@ export async function requestPortalOtp(formData: FormData) {
 }
 
 export async function verifyPortalOtp(formData: FormData) {
+  if (isDemoMode()) redirect("/login");
   const email = formData.get("email") as string;
   const token = (formData.get("token") as string)?.trim();
   if (!email || !token) {

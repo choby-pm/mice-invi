@@ -4,6 +4,10 @@
 
 ## 실행
 
+현재는 데모 모드가 기본입니다. `/login`, `/console-login`, `/vendor-login`, `/portal-login`에서 역할 버튼을 누르면 비밀번호·이메일 인증번호 없이 전용 데모 계정으로 입장합니다. 플랫폼 운영자는 기존 내부 도구 화면으로 입장합니다. 일반 로그인·가입·인증번호 발급은 데모 모드에서 중지됩니다. 원래 로그인으로 되돌리려면 실행 환경에 `DEMO_MODE=false`를 설정하고 재시작/재배포합니다.
+
+역할 버튼도 실제 Supabase 연결과 아래 데이터 생성이 필요합니다. DB 연결 실패나 계정 누락 시 오류를 표시합니다. 데모 이메일·관리자 메타데이터·조직/업체/대표단 연결을 서버에서 검사하며, 데모 외 조직에도 연결된 계정은 입장을 거부합니다. 토큰과 관리자 키는 브라우저로 보내지 않습니다. 공용 데모 계정이므로 체험자들의 수정 내용은 공유됩니다.
+
 ```sh
 npm run seed:demo             # 생성 목록만 미리보기 (DB 연결 없음)
 npm run test:demo             # 데이터 관계·기능별 구성 검사 (DB 연결 없음)
@@ -18,9 +22,9 @@ DB에는 `supabase/migrations/0001`부터 `0030`까지 적용되어 있어야 �
 | PCO 담당자 | choby.pm+demo-manager@gmail.com | `/console-login` |
 | 현장 조회 직원 | choby.pm+demo-field@gmail.com | `/console-login` |
 | 5개 업체 담당자 | choby.pm+demo-vendor@gmail.com | `/vendor-login` |
-| 대표단 대리인 | choby.pm+demo-proxy@gmail.com | `/portal-login` (이메일 인증번호) |
+| 대표단 대리인 | choby.pm+demo-proxy@gmail.com | `/portal-login` |
 
-기존 개발 계정은 사용하지 않습니다. 현재 앱은 PCO 계정당 조직 하나를 선택하므로 별도 데모 계정으로 로그인해야 합니다. 계정 생성 시 초대 메일은 발송하지 않습니다. 대리인 로그인 시 인증번호가 해당 Gmail의 받은편지함으로 전달됩니다.
+기존 개발 계정은 사용하지 않습니다. 현재 앱은 PCO 계정당 조직 하나를 선택하므로 별도 데모 계정으로 로그인합니다. 계정 생성·데모 입장 시 메일은 발송하지 않습니다. `DEMO_MODE=false`일 때만 원래 비밀번호 로그인·대리인 이메일 인증번호 로그인을 사용합니다.
 
 ## 영역별 검수 항목
 

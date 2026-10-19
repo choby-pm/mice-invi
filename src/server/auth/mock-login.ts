@@ -12,10 +12,11 @@ const SECTION_BY_ROLE: Record<MockRole, string> = {
 // (/console-login, /portal-login, /vendor-login — D-SY-10).
 export async function mockLogin(formData: FormData) {
   const role = formData.get("role") as MockRole;
+  if (role !== "PLATFORM_ADMIN") redirect("/login");
   const next = formData.get("next") as string | null;
   const store = await cookies();
-  store.set("mock_role", role, { path: "/", sameSite: "lax" });
-  redirect(next && next.startsWith("/") ? next : SECTION_BY_ROLE[role]);
+  store.set("mock_role", role, { path: "/", sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production" });
+  redirect(next === "/admin" || next?.startsWith("/admin/") ? next : SECTION_BY_ROLE[role]);
 }
 
 export async function mockLogout() {

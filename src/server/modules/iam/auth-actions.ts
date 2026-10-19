@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { bootstrapTenant } from "@/server/modules/org/bootstrap-tenant";
+import { isDemoMode } from "@/lib/demo";
 
 // PCO 콘솔의 실제 로그인 (D-SY-10). 이메일 인증 메일은 아직 안 붙어 있어(D-SY-11 보류),
 // 가입 시 관리자 키로 바로 확인 처리합니다 — 대신 비밀번호를 본인이 직접 정합니다.
 export async function signUpPco(formData: FormData) {
+  if (isDemoMode()) redirect("/login");
   const tenantName = (formData.get("tenantName") as string)?.trim();
   const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
@@ -48,6 +50,7 @@ export async function signUpPco(formData: FormData) {
 }
 
 export async function logInPco(formData: FormData) {
+  if (isDemoMode()) redirect("/login");
   const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
 

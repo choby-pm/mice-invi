@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { DemoLogin } from "@/components/shared/demo-login";
+import { isDemoMode } from "@/lib/demo";
 import { mockLogin } from "@/server/auth/mock-login";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +18,10 @@ const MOCK_ROLE_OPTIONS = [
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
+  if (isDemoMode()) return <DemoLogin error={error} />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">

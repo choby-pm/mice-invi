@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { DemoLogin } from "@/components/shared/demo-login";
+import { isDemoMode } from "@/lib/demo";
 import { logInPco } from "@/server/modules/iam/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,7 @@ export default async function ConsoleLoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  if (isDemoMode()) return <DemoLogin error={error} />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">

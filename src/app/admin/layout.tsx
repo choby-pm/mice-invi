@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { mockLogout } from "@/server/auth/mock-login";
+import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Button type="submit" variant="ghost" size="sm">로그아웃</Button>
         </form>
       </header>
+      <nav className="flex gap-4 border-b px-4 py-3 text-sm">
+        <Link href="/admin" className="underline">운영 현황</Link>
+        <Link href="/admin/db-check" className="underline">DB 연결 점검</Link>
+      </nav>
       <main className="flex-1 p-6">{children}</main>
     </div>
   );

@@ -1,48 +1,71 @@
-# VIP 초청자 관리 솔루션 (가칭)
+# MICE INVI · VIP 초청자 관리
 
-MICE 행사에 초청되는 해외 VIP와 동반자·수행원을 관리하는 SaaS입니다. PCO(행사 운영사)가 여러 행사에 반복 사용하며, 주최측·진행 업체·초청자 측 대리인이 각자의 접점으로 참여합니다.
+PCO(행사 운영사)의 전달·독촉 업무를 줄이고, 업체가 고객 요청을 바로 처리하며, VIP 측이 최신 예약을 확인하는 MICE 초청자 관리 서비스입니다. 행사 → 대표단 → 참가자 구조로 관리하며, **요청과 확정 결과를 분리하고 변경 후 실제 반영 여부를 추적**합니다.
 
-> **핵심 가치**: 잦은 변경이 2차·3차·4차로 번지는 연쇄를 시스템이 추적하고, "업체에 알렸다"가 아니라 "업체가 반영했다"까지 확인한다.
+**[서비스·역할별 데모](https://miceinvi.vercel.app/login)** · [현재 구현 상태](docs/current-status.md) · [기획 산출물 지도](docs/README.md) · [보안 안내](SECURITY.md)
 
-## 데모 테스트
+## 주요 기능
 
-기능별 목업 데이터와 계정 생성 방법은 [데모 데이터 안내](docs/demo-data.md)를 참고하세요. `npm run seed:demo`로 미리보기, `npm run seed:demo -- --apply`로 DB에 생성합니다.
+| 사용자 | 제공 기능 |
+|---|---|
+| PCO 관리자·담당자 | 행사·대표단·참가자·업체 관리, 운영 현황, 서비스 배정, 변경 이슈·조정, 동의·열람 기록 |
+| 현장 직원 | 허용된 행사 명단·서비스 조회 |
+| 업체 | 배정 서비스의 고객 요청·상세 조회, 예약·확정·취소, 변경 확인, 처리 내역 |
+| VIP 측 대리인 | 자기 대표단 참석 회신·참가자 정보·동의·서비스 요청·예약 확인·일정 회신 |
+| 플랫폼 운영자 | 데모 조직 현황·DB 연결 확인용 임시 화면 |
 
-## 문서 지도
+항공·숙박·수송·공항 의전·식음 업무를 지원합니다. 항공 업체는 배정된 대표단의 동의가 유효한 여권 정보를 명시적으로 열람할 수 있으며 기록이 남습니다. 프리텐다드와 공통 상태 표시를 사용합니다.
 
-> **Claude Code로 이 폴더를 열었다면** `CLAUDE.md` → `docs/08_claude_code_handoff.md` 순서로 읽으세요.
+현재는 **공유 데모**입니다. 행사 3개·대표단 6개·참가자 18명·서비스 31건을 기준으로 구성했으며 체험자의 변경은 공유됩니다. 데모 대리인은 베트남 대표단 하나, 데모 업체는 항공 업체 하나에만 연결됩니다. **실제 고객 개인정보나 여권을 데모에 입력하지 마세요.**
 
-| 순서 | 문서 | 내용 | 상태 |
-|---|---|---|---|
-| 00 | [문제 정의](docs/00_problem_definition.md) | 사용자, 병목, 대상, 수동/자동 경계, KPI | ✅ v1.0 |
-| 01 | [업무·데이터 분석서](docs/01_business_data_analysis.md) | 업무 흐름, 데이터 엔티티, 상태 S01~S14, 영향 규칙 IR-01~16 | ✅ v0.4 |
-| 02 | [UX/IA 설계서](docs/02_ux_ia_design.md) | 접점별 정보 구조, 화면 목표, 상태별 화면, 반응형·다국어 | ✅ v0.3 |
-| 03 | [시스템 구조·기능 명세서](docs/03_system_spec.md) | 구조, API, 배치, 인터페이스, 안정성 대비 | ✅ v0.2 |
-| 04 | [MVP 범위·로드맵](docs/04_mvp_roadmap.md) | MVP 범위, 트랙 A·B, 릴리스 R0~R6 | ✅ v1.0 |
-| 05 | [프레임 목업](design/mockups/frame_mockup_v0.6.html) | MVP 전체 55개 화면 + 대화상자 40개 | ✅ v0.6 |
-| 06 | [UI 의사결정](docs/06_ui_decisions.md) · [테마 랩](design/mockups/ui_theme_lab_v0.2.html) | UI 규칙 13가지 | ✅ v1.0 |
-| 07 | [테마](docs/07_theme.md) · [토큰](design/tokens/globals.css) | T1 프로토콜 네이비 | ✅ v1.0 |
-| 08 | [Claude Code 인수인계서](docs/08_claude_code_handoff.md) | 읽을 순서, 확정·열린 결정, 작업 방식, R0 순서 | ✅ v1.0 |
-| - | [결정 로그](docs/decisions/DECISION_LOG.md) | 전 단계 결정 통합 | 계속 갱신 |
-| - | [검수 로그](docs/reviews/REVIEW_LOG.md) | 검수·피드백·반영 기록 | 계속 갱신 |
+## 로컬 실행
 
-## 번호 체계 (문서 간 공통)
+Node.js 24 환경에서 검증했습니다. npm을 사용합니다.
 
-| 접두어 | 의미 | 정의 위치 |
+```sh
+npm ci
+cp .env.local.example .env.local
+# .env.local에 해당 환경의 값을 입력
+npm run dev
+```
+
+Windows PowerShell에서는 복사에 `Copy-Item .env.local.example .env.local`, npm 실행 제한 시 `npm.cmd`를 사용하세요. 기존 `.env.local`을 덮어쓰지 마세요.
+
+| 환경변수 | 용도 | 노출 범위 |
 |---|---|---|
-| `P01~` | 업무 프로세스 | 01 |
-| `BR-` | 업무 규칙 | 01 |
-| `S01~` | 상태 정의 | 01 3부 |
-| `IR-` | 영향 규칙 | 01 P11 |
-| `PCO-E01`, `PX-03` 등 | 화면 ID | 02 |
-| `API-`, `B01~`, `W01~`, `IF-` | API, 배치, 비동기 작업, 인터페이스 | 03 |
-| `R0~R6` | 개발 릴리스 | 04 |
-| `D-{단계}-{번호}` | 결정 | 결정 로그 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 주소 | 공개 가능 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 공개 클라이언트 키 | 공개 가능, DB 권한 정책 필요 |
+| `SUPABASE_SECRET_KEY` | 서버 관리 작업·테스트 준비 | **서버 전용 비밀키** |
+| `NEXT_PUBLIC_SITE_URL` | 초청 링크 기준 주소 | 공개 가능 |
+| `DEMO_MODE` | `true`: 공유 데모, `false`: 일반 로그인 | 미설정 시 데모 활성 |
 
-## 작업 방식
+DB 스키마는 `supabase/migrations/0001`~`0039` 기준입니다. 새 DB에 번호순으로 적용하고, 기존 DB는 적용 이력을 확인해 누락분만 적용하세요. 앱 시작·Vercel 배포가 DB 마이그레이션을 자동 실행하지는 않습니다.
 
-모든 산출물은 **검수 요청 → 피드백 → 수정**을 반복하며 확정합니다. 자세한 규칙은 [검수 로그](docs/reviews/REVIEW_LOG.md)를 참고하세요.
+## 검증·데모 데이터
 
-## 현재 단계
+```sh
+npm run lint
+npm test
+npm run test:demo
+npm run build
+node scripts/check-demo-state.mjs
+```
 
-**설계·디자인 완료 → 트랙 B 개발 시작 (Claude Code, R0 개발 준비)**
+`npm test`의 DB 연동 테스트는 관리자 키로 독립 테스트 조직·계정을 생성·정리하므로 **분리된 검증 DB 사용을 권장**합니다. `test:demo`는 DB 없이 fixture 구성을 검사하고, `check-demo-state`는 데모 현황을 읽습니다. 최신 기능 검증 기록: 자동 테스트 168개·배포 빌드 통과(2026-10-20).
+
+기존 데모 확인에는 재생성이 필요하지 않습니다. 신규 환경에만 [데모 데이터 안내](docs/demo-data.md)에 따라 `seed:demo` 미리보기 후 `--apply`를 사용하세요.
+
+## 구조·배포
+
+```text
+src/app/             PCO·업체·대리인·운영사 화면
+src/components/      공통 UI와 역할별 업무 화면
+src/server/          인증·업무 행동·서버 처리
+supabase/migrations/ DB 구조·권한·업무 함수
+tests/               권한·변경 전파·민감정보 검증
+scripts/             데모·개발·운영 확인 도구
+docs/                기획·현재 상태·결정·검증 기록
+design/              토큰과 기획 당시 HTML 목업
+```
+
+`main` 푸시 시 Vercel이 자동 배포합니다. 환경변수는 배포 환경의 비밀 설정으로 관리하며 저장소에 넣지 않습니다. 실제 운영 전 남은 항목은 [현재 상태·후속 과제](docs/current-status.md)를 확인하세요.

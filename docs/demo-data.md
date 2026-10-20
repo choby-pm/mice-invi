@@ -14,7 +14,7 @@ npm run test:demo             # 데이터 관계·기능별 구성 검사 (DB �
 npm run seed:demo -- --apply  # .env.local의 Supabase에 실제 생성
 ```
 
-DB에는 `supabase/migrations/0001`부터 `0030`까지 적용되어 있어야 합니다. `.env.local`의 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`가 필요합니다. 새 계정 비밀번호는 실행 시 무작위 생성해 터미널에 한 번 표시합니다. 직접 정하려면 실행 환경의 `DEMO_PASSWORD`를 설정합니다. 비밀번호와 관리자 키를 저장소에 커밋하지 마세요.
+현재 앱 검증 기준은 `supabase/migrations/0001`부터 `0039`까지입니다. 기존 DB에는 누락된 마이그레이션만 적용하세요. `.env.local`의 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`가 필요합니다. 새 계정 비밀번호는 실행 시 무작위 생성해 터미널에 한 번 표시합니다. 직접 정하려면 실행 환경의 `DEMO_PASSWORD`를 설정합니다. 비밀번호와 관리자 키를 저장소에 커밋하지 마세요.
 
 | 접점 | 이메일 | 진입 경로 |
 |---|---|---|

@@ -1,8 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
+import { fromFormDateTime } from "@/lib/date";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/date";
+import { requestStatus, requestChanged } from "@/lib/service-request-status";
+import { replaceServiceDetails } from "@/server/modules/service-item/replace-details";
 
 interface FlightSegmentInput {
   direction: "INBOUND" | "OUTBOUND";
@@ -20,7 +24,7 @@ interface FlightSegmentInput {
 }
 
 // 항공 요청 저장 (대리인·PCO). 03 §2.1 원칙대로 "요청 제출"이라는 행동 하나만 노출 —
-// DRAFT일 때만 REQUESTED로 넘어가고, 이후엔 내용만 갱신합니다. service_item.note/scheduled_at에는
+// 최초 제출은 REQUESTED, 확정 후 요청 변경은 CHANGING으로 표시하고 기존 발권은 보존합니다. 요약에는
 // 사람이 읽기 쉬운 요약을 같이 남겨서 콘솔·업체 목록 화면이 구조화 필드 없이도 계속 동작합니다.
 export async function saveFlightRequest(formData: FormData) {
   const serviceItemId = formData.get("serviceItemId") as string;
@@ -36,10 +40,20 @@ export async function saveFlightRequest(formData: FormData) {
   const note = (formData.get("note") as string)?.trim() || null;
 
   const supabase = await createServerSupabaseClient();
-  const { data: item } = await supabase.from("service_item").select("status").eq("id", serviceItemId).single();
+  const { data: item } = await supabase.from("service_item").select("status, service_type, flight_request(*)").eq("id", serviceItemId).single();
   if (!item) return;
+  if (item.service_type !== "FLIGHT") throw new Error("항공 요청 항목이 아닙니다.");
+  for (const value of [inboundPreferredDate, outboundPreferredDate]) {
+    if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw new Error("희망 날짜를 확인해 주세요.");
+  }
+  if (inboundPreferredDate && outboundPreferredDate && outboundPreferredDate < inboundPreferredDate) throw new Error("귀국일은 입국일 이후여야 합니다.");
+  const previous = Array.isArray(item.flight_request) ? item.flight_request[0] : item.flight_request;
+  const next = { inbound_origin_city: inboundOriginCity, inbound_dest_airport: inboundDestAirport,
+    inbound_preferred_date: inboundPreferredDate, outbound_preferred_date: outboundPreferredDate,
+    outbound_origin_airport: outboundOriginAirport, outbound_dest_city: outboundDestCity, note };
+  const status = requestStatus(item.status, requestChanged(previous, next));
 
-  await supabase.from("flight_request").upsert(
+  const requestResult = await supabase.from("flight_request").upsert(
     {
       service_item_id: serviceItemId,
       inbound_origin_city: inboundOriginCity,
@@ -53,23 +67,27 @@ export async function saveFlightRequest(formData: FormData) {
     },
     { onConflict: "service_item_id" },
   );
+  if (requestResult.error) throw requestResult.error;
 
   const summary = [
-    inboundDestAirport && `${inboundDestAirport} 도착 희망${inboundPreferredDate ? ` (${formatDate(inboundPreferredDate, "ko")})` : ""}`,
-    outboundOriginAirport && `${outboundOriginAirport} 출발 희망${outboundPreferredDate ? ` (${formatDate(outboundPreferredDate, "ko")})` : ""}`,
+    [inboundOriginCity, inboundDestAirport].filter(Boolean).join(" → ") + (inboundPreferredDate ? ` (${formatDate(inboundPreferredDate, "ko")})` : ""),
+    [outboundOriginAirport, outboundDestCity].filter(Boolean).join(" → ") + (outboundPreferredDate ? ` (${formatDate(outboundPreferredDate, "ko")})` : ""),
+    note,
   ]
     .filter(Boolean)
     .join(" · ") || null;
 
-  await supabase
+  const updateResult = await supabase
     .from("service_item")
     .update({
       note: summary,
       scheduled_at: inboundPreferredDate ? new Date(inboundPreferredDate).toISOString() : null,
-      status: item.status === "DRAFT" ? "REQUESTED" : item.status,
+      status,
     })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (updateResult.error || !updateResult.data) throw new Error("항공 요청을 저장하지 못했습니다.");
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -84,9 +102,12 @@ export async function saveFlightSegments(formData: FormData) {
   try {
     segments = JSON.parse((formData.get("segments") as string) || "[]");
   } catch {
-    segments = [];
+    throw new Error("항공편 입력 형식이 올바르지 않습니다.");
   }
-  segments = segments.filter((s) => s.flightNo && s.depAt && s.arrAt);
+  if (!Array.isArray(segments) || !segments.length || segments.some((s) => !s || !s.flightNo?.trim() || !s.depAirport?.trim() || !s.arrAirport?.trim() || !["INBOUND", "OUTBOUND"].includes(s.direction)
+    || !["BOOKED", "TICKETED", "CANCELLED"].includes(s.ticketStatus || "BOOKED")
+    || (s.changeFee && (!Number.isFinite(Number(s.changeFee)) || Number(s.changeFee) < 0)))) throw new Error("편명·공항·발권 상태를 확인해 주세요.");
+  for (const s of segments) if (fromFormDateTime(s.arrAt) <= fromFormDateTime(s.depAt)) throw new Error("항공편 도착 시각은 출발 이후여야 합니다.");
 
   const supabase = await createServerSupabaseClient();
 
@@ -97,8 +118,6 @@ export async function saveFlightSegments(formData: FormData) {
     .eq("service_item_id", serviceItemId);
   const oldFinalArrival = (oldSegments ?? []).find((s) => s.direction === "INBOUND" && s.is_final_arrival);
   const oldFirstDeparture = (oldSegments ?? []).find((s) => s.direction === "OUTBOUND" && s.seq === 1);
-
-  await supabase.from("flight_segment").delete().eq("service_item_id", serviceItemId);
 
   const byDirection: Record<string, FlightSegmentInput[]> = { INBOUND: [], OUTBOUND: [] };
   for (const s of segments) byDirection[s.direction]?.push(s);
@@ -114,8 +133,8 @@ export async function saveFlightSegments(formData: FormData) {
         flight_no: s.flightNo,
         dep_airport: s.depAirport || null,
         arr_airport: s.arrAirport || null,
-        dep_at: new Date(s.depAt).toISOString(),
-        arr_at: new Date(s.arrAt).toISOString(),
+        dep_at: fromFormDateTime(s.depAt),
+        arr_at: fromFormDateTime(s.arrAt),
         cabin_class: s.cabinClass || null,
         pnr: s.pnr || null,
         ticket_no: s.ticketNo || null,
@@ -126,11 +145,7 @@ export async function saveFlightSegments(formData: FormData) {
       });
     });
   }
-  let insertedRows: { id: string; direction: string; seq: number }[] = [];
-  if (rows.length > 0) {
-    const { data } = await supabase.from("flight_segment").insert(rows).select("id, direction, seq");
-    insertedRows = data ?? [];
-  }
+  const insertedRows = await replaceServiceDetails(supabase, "flight_segment", serviceItemId, rows) as { id: string; direction: string; seq: number }[];
 
   const finalArrival = byDirection.INBOUND.at(-1);
   const firstDeparture = byDirection.OUTBOUND[0];
@@ -155,7 +170,7 @@ export async function saveFlightSegments(formData: FormData) {
       p_direction: "INBOUND",
       p_from_text: finalArrival.arrAirport || "공항",
       p_to_text: "숙소",
-      p_scheduled_at: new Date(finalArrival.arrAt).toISOString(),
+      p_scheduled_at: fromFormDateTime(finalArrival.arrAt),
       p_source_flight_segment_id: segId,
     });
   }
@@ -166,7 +181,7 @@ export async function saveFlightSegments(formData: FormData) {
       p_direction: "OUTBOUND",
       p_from_text: "숙소",
       p_to_text: firstDeparture.depAirport || "공항",
-      p_scheduled_at: new Date(firstDeparture.depAt).toISOString(),
+      p_scheduled_at: fromFormDateTime(firstDeparture.depAt),
       p_source_flight_segment_id: segId,
     });
   }
@@ -177,13 +192,13 @@ export async function saveFlightSegments(formData: FormData) {
     p_flight_service_item_id: serviceItemId,
     p_old_inbound_arr_at: oldFinalArrival?.arr_at ?? null,
     p_old_inbound_arr_airport: oldFinalArrival?.arr_airport ?? null,
-    p_new_inbound_arr_at: finalArrival ? new Date(finalArrival.arrAt).toISOString() : null,
+    p_new_inbound_arr_at: finalArrival ? fromFormDateTime(finalArrival.arrAt) : null,
     p_new_inbound_arr_airport: finalArrival?.arrAirport ?? null,
     p_old_outbound_dep_at: oldFirstDeparture?.dep_at ?? null,
     p_old_outbound_dep_airport: oldFirstDeparture?.dep_airport ?? null,
-    p_new_outbound_dep_at: firstDeparture ? new Date(firstDeparture.depAt).toISOString() : null,
+    p_new_outbound_dep_at: firstDeparture ? fromFormDateTime(firstDeparture.depAt) : null,
     p_new_outbound_dep_airport: firstDeparture?.depAirport ?? null,
   });
 
-  revalidatePath("/vendor");
+  revalidateLinkedViews();
 }

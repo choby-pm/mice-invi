@@ -5,6 +5,8 @@ import { createClient as createServerSupabaseClient } from "@/lib/supabase/serve
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentMembership } from "@/server/modules/org/get-membership";
 import { getSiteUrl } from "@/lib/site-url";
+import { assignDefaultServiceVendors } from "@/server/modules/service-item/assign-default-vendors";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 
 export async function addEventVendor(formData: FormData) {
   const eventId = formData.get("eventId") as string;
@@ -33,12 +35,15 @@ export async function addEventVendor(formData: FormData) {
     vendorId = created.id;
   }
 
-  await supabase.from("event_vendor").insert({
+  const assignment = await supabase.from("event_vendor").insert({
     tenant_id: membership.tenantId,
     event_id: eventId,
     vendor_id: vendorId,
     service_types: serviceTypes,
   });
+  if (assignment.error) throw assignment.error;
+  await assignDefaultServiceVendors(supabase, eventId);
+  revalidateLinkedViews();
 
   // 담당자 이메일을 입력했으면 그 업체의 로그인 계정으로 초청 (플랫폼에 이미 있으면 바로 배정)
   if (contactEmail) {

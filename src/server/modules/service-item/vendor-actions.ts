@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 // 업체 쪽 행동 API 2개 — 상태는 여기서만 바뀝니다(03 §2.1).
@@ -12,7 +12,7 @@ export async function startServiceItem(formData: FormData) {
 
   const supabase = await createServerSupabaseClient();
   await supabase.from("service_item").update({ status: "IN_PROGRESS" }).eq("id", id).eq("status", "REQUESTED");
-  revalidatePath("/vendor");
+  revalidateLinkedViews();
 }
 
 export async function confirmServiceItem(formData: FormData) {
@@ -25,5 +25,5 @@ export async function confirmServiceItem(formData: FormData) {
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
     .eq("id", id);
-  revalidatePath("/vendor");
+  revalidateLinkedViews();
 }

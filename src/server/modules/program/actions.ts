@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
+import { fromFormDateTime } from "@/lib/date";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/server/modules/org/get-membership";
 
@@ -29,13 +31,14 @@ export async function createProgram(formData: FormData) {
     program_type: programType,
     organizer_type: organizerType,
     organizer_delegation_id: organizerType === "DELEGATION" ? organizerDelegationId : null,
-    start_at: startAtRaw ? new Date(startAtRaw).toISOString() : null,
-    end_at: endAtRaw ? new Date(endAtRaw).toISOString() : null,
+    start_at: startAtRaw ? fromFormDateTime(startAtRaw) : null,
+    end_at: endAtRaw ? fromFormDateTime(endAtRaw) : null,
     venue,
     visibility,
     dress_code: dressCode,
   });
 
+  revalidateLinkedViews();
   revalidatePath(`/console/events/${eventId}/programs`);
 }
 
@@ -47,6 +50,7 @@ export async function confirmProgram(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   await supabase.rpc("confirm_program", { p_program_id: id });
   revalidatePath(`/console/events/${eventId}/programs`);
+  revalidateLinkedViews();
   revalidatePath(`/console/events/${eventId}/programs/${id}`);
 }
 
@@ -57,6 +61,7 @@ export async function cancelProgram(formData: FormData) {
 
   const supabase = await createServerSupabaseClient();
   await supabase.rpc("cancel_program", { p_program_id: id });
+  revalidateLinkedViews();
   revalidatePath(`/console/events/${eventId}/programs`);
   revalidatePath(`/console/events/${eventId}/programs/${id}`);
 }
@@ -80,6 +85,7 @@ export async function addProgramAttendance(formData: FormData) {
     role,
   });
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -90,6 +96,7 @@ export async function removeProgramAttendance(formData: FormData) {
 
   const supabase = await createServerSupabaseClient();
   await supabase.from("program_attendance").delete().eq("id", id);
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -98,10 +105,12 @@ export async function respondProgramAttendance(formData: FormData) {
   const id = formData.get("id") as string;
   const status = formData.get("status") as string;
   const revalidateTo = formData.get("revalidateTo") as string;
-  if (!id || !status) return;
+  if (!id || !["CONFIRMED", "DECLINED"].includes(status)) return;
 
   const supabase = await createServerSupabaseClient();
-  await supabase.from("program_attendance").update({ status }).eq("id", id);
+  const result = await supabase.from("program_attendance").update({ status }).eq("id", id).select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("일정 참석 회신을 저장하지 못했습니다.");
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -119,12 +128,15 @@ export async function registerSelfScheduledProgram(formData: FormData) {
   const participantIds = formData.getAll("participantIds") as string[];
   if (!delegationId || !eventId || !name || !startAtRaw || participantIds.length === 0) return;
 
-  const startAt = new Date(startAtRaw).toISOString();
+  const startAt = fromFormDateTime(startAtRaw);
   const lateRegistration = new Date(startAt).getTime() - Date.now() < 24 * 60 * 60 * 1000;
 
   const supabase = await createServerSupabaseClient();
-  const { data: delegation } = await supabase.from("delegation").select("tenant_id").eq("id", delegationId).single();
+  const { data: delegation } = await supabase.from("delegation").select("tenant_id, event_id").eq("id", delegationId).single();
   if (!delegation) return;
+  if (delegation.event_id !== eventId) throw new Error("대표단의 행사와 일정의 행사가 일치하지 않습니다.");
+  const participants = await supabase.from("participant").select("id").eq("delegation_id", delegationId).in("id", participantIds);
+  if (participants.error || participants.data?.length !== new Set(participantIds).size || new Set(participantIds).size !== participantIds.length) throw new Error("해당 대표단의 참가자를 선택해 주세요.");
 
   const { data: program } = await supabase
     .from("program")
@@ -164,6 +176,7 @@ export async function registerSelfScheduledProgram(formData: FormData) {
     });
   }
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 

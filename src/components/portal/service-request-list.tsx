@@ -282,6 +282,7 @@ function ServiceRequestCard({
   const typeInfo = SERVICE_TYPES.find((t) => t.value === item.service_type);
   const columns = SERVICE_TYPE_COLUMN_LABELS[item.service_type];
   const submitted = item.status !== "DRAFT";
+  const editable = !["CANCELLED", "CANCEL_REQ", "NOT_APPLICABLE"].includes(item.status);
   const isFlight = item.service_type === "FLIGHT";
   const isLodging = item.service_type === "LODGING";
   // 수송은 대리인이 요청하지 않고 항공 확정 결과로 시스템이 자동 생성합니다(P08) — 그래서
@@ -299,9 +300,9 @@ function ServiceRequestCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-3"><ServiceDetailDialog item={item} />{item.confirmation_note && <p className="text-sm leading-6">업체 처리 결과: {item.confirmation_note}</p>}</div>
-        {isTransfer ? (
+        {isTransfer || item.service_type === "AIRPORT" || !editable ? (
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {item.note ?? "항공편이 확정되면 자동으로 생성됩니다."}
+            {item.note ?? "담당자가 처리 결과를 안내합니다."}
           </p>
         ) : !open ? (
           <div className="space-y-2">

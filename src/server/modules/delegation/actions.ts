@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/server/modules/org/get-membership";
+import { assignDefaultServiceVendors } from "@/server/modules/service-item/assign-default-vendors";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 
 export async function createDelegation(formData: FormData) {
   const eventId = formData.get("eventId") as string;
@@ -15,7 +17,7 @@ export async function createDelegation(formData: FormData) {
   if (!membership || membership.role === "PCO_FIELD") return;
 
   const supabase = await createServerSupabaseClient();
-  await supabase.from("delegation").insert({
+  const created = await supabase.from("delegation").insert({
     tenant_id: membership.tenantId,
     event_id: eventId,
     name,
@@ -23,6 +25,9 @@ export async function createDelegation(formData: FormData) {
     organization,
     owner_user_id: membership.userId,
   });
+  if (created.error) throw created.error;
+  await assignDefaultServiceVendors(supabase, eventId);
+  revalidateLinkedViews();
   // DB 트리거가 5개 서비스 유형에 기본 항목을 자동으로 만들어 주므로 그 화면도 갱신합니다.
   revalidatePath(`/console/events/${eventId}/delegations`);
   revalidatePath(`/console/events/${eventId}/services`);

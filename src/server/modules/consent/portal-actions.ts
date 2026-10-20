@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 export interface ConsentItemWithStatus {
@@ -67,5 +68,6 @@ export async function submitConsent(formData: FormData) {
       { onConflict: "item_id,participant_id" },
     );
   }
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }

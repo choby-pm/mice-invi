@@ -1,6 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
+import { fromFormDateTime } from "@/lib/date";
+import { replaceServiceDetails } from "@/server/modules/service-item/replace-details";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 interface VehicleDispatchInput {
@@ -25,21 +27,18 @@ export async function saveVehicleDispatches(formData: FormData) {
   try {
     vehicles = JSON.parse((formData.get("vehicles") as string) || "[]");
   } catch {
-    vehicles = [];
+    throw new Error("배차 입력 형식이 올바르지 않습니다.");
   }
-  vehicles = vehicles.filter((v) => v.departAt);
+  if (!Array.isArray(vehicles) || !vehicles.length || vehicles.some((v) => !v || !v.departAt || !Array.isArray(v.participantIds))) throw new Error("차량 출발 시각과 탑승 참가자를 확인해 주세요.");
 
   const supabase = await createServerSupabaseClient();
 
-  await supabase.from("vehicle_dispatch").delete().eq("service_item_id", serviceItemId);
-
-  if (vehicles.length > 0) {
-    await supabase.from("vehicle_dispatch").insert(
+  await replaceServiceDetails(supabase, "vehicle_dispatch", serviceItemId,
       vehicles.map((v) => ({
         service_item_id: serviceItemId,
         from_text: v.fromText || null,
         to_text: v.toText || null,
-        depart_at: v.departAt ? new Date(v.departAt).toISOString() : null,
+        depart_at: v.departAt ? fromFormDateTime(v.departAt) : null,
         vehicle_class: v.vehicleClass || null,
         plate_no: v.plateNo || null,
         driver_name: v.driverName || null,
@@ -47,8 +46,7 @@ export async function saveVehicleDispatches(formData: FormData) {
         participant_ids: v.participantIds ?? [],
         luggage_note: v.luggageNote || null,
       })),
-    );
-  }
+  );
 
   const first = vehicles[0];
   const confirmationNote = vehicles.length
@@ -60,5 +58,5 @@ export async function saveVehicleDispatches(formData: FormData) {
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
     .eq("id", serviceItemId);
 
-  revalidatePath("/vendor");
+  revalidateLinkedViews();
 }

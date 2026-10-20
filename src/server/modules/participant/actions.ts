@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 // PCO 콘솔과 대리인 포털 양쪽에서 씁니다 — 권한 판단은 RLS(participant_insert:
@@ -48,6 +49,7 @@ export async function createParticipant(formData: FormData) {
     });
   }
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -60,7 +62,7 @@ export async function deleteParticipant(formData: FormData) {
   if (!id || !delegationId) return;
 
   const supabase = await createServerSupabaseClient();
-  const { data: participant } = await supabase.from("participant").select("last_name, first_name").eq("id", id).single();
+  const { data: participant } = await supabase.from("participant").select("last_name, first_name").eq("id", id).eq("delegation_id", delegationId).single();
   if (!participant) return;
 
   const { error } = await supabase.from("participant").delete().eq("id", id);
@@ -73,5 +75,6 @@ export async function deleteParticipant(formData: FormData) {
     p_kind: "REMOVED",
   });
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }

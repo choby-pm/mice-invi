@@ -39,5 +39,23 @@ export function formatDateTime(
     new Intl.DateTimeFormat("en-US", { timeZoneName: "short", timeZone })
       .formatToParts(d)
       .find((p) => p.type === "timeZoneName")?.value ?? timeZone;
-  return `${formatDate(d, locale)} ${time} ${zoneName}`;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(d);
+  const part = (name: string) => parts.find((p) => p.type === name)!.value;
+  const dateText = locale === "en" ? `${part("day")} ${MONTHS_EN[Number(part("month")) - 1]} ${part("year")}` : `${part("year")}년 ${part("month")}월 ${part("day")}일`;
+  return `${dateText} ${time} ${zoneName}`;
+}
+
+// datetime-local 입력은 시간대가 없으므로 운영 기준(서울)을 명시해서 왕복합니다.
+export function toFormDateTime(value: string): string {
+  const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(value));
+  const part = (name: string) => parts.find((p) => p.type === name)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
+export function fromFormDateTime(value: string): string {
+  const local = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(value);
+  if (!local && !/(Z|[+-]\d{2}:\d{2})$/.test(value)) throw new Error("일시 형식이 올바르지 않습니다.");
+  const parsed = new Date(local ? `${value}+09:00` : value);
+  if (!Number.isFinite(parsed.getTime()) || (local && toFormDateTime(parsed.toISOString()) !== value.slice(0, 16))) throw new Error("일시를 확인해 주세요.");
+  return parsed.toISOString();
 }

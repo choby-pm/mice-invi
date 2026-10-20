@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
+import { requestStatus } from "@/lib/service-request-status";
 
 const DIETARY_LABEL: Record<string, string> = {
   NONE: "일반",
@@ -30,24 +32,28 @@ export async function saveDietaryRequirements(formData: FormData) {
   try {
     entries = JSON.parse((formData.get("entries") as string) || "[]");
   } catch {
-    entries = [];
+    throw new Error("식이 요청 형식이 올바르지 않습니다.");
   }
-  entries = entries.filter((e) => e.participantId);
+  if (!Array.isArray(entries) || entries.length === 0 || entries.some((e) => !e || typeof e.participantId !== "string" || !Object.hasOwn(DIETARY_LABEL, e.dietaryCode) || (e.note != null && typeof e.note !== "string"))
+    || new Set(entries.map((e) => e.participantId)).size !== entries.length) throw new Error("참가자와 식이 요청을 확인해 주세요.");
 
   const supabase = await createServerSupabaseClient();
-  const { data: item } = await supabase.from("service_item").select("status").eq("id", serviceItemId).single();
+  const { data: item } = await supabase.from("service_item").select("status, service_type, delegation_id, dietary_requirement(id, participant_id, dietary_code, note)").eq("id", serviceItemId).single();
   if (!item) return;
+  if (item.service_type !== "DIETARY") throw new Error("식이 요청 항목이 아닙니다.");
+  const participants = await supabase.from("participant").select("id").eq("delegation_id", item.delegation_id).in("id", entries.map((e) => e.participantId));
+  if (participants.error || participants.data?.length !== entries.length) throw new Error("대표단 참가자를 확인해 주세요.");
+  const rows = entries.map((e) => ({ service_item_id: serviceItemId, participant_id: e.participantId, dietary_code: e.dietaryCode, note: e.note?.trim() || null }));
+  const previous = item.dietary_requirement ?? [];
+  const changed = previous.length !== rows.length || rows.some((r) => !previous.some((p) => p.participant_id === r.participant_id && p.dietary_code === r.dietary_code && p.note === r.note));
+  const status = requestStatus(item.status, changed);
 
-  await supabase.from("dietary_requirement").delete().eq("service_item_id", serviceItemId);
-  if (entries.length > 0) {
-    await supabase.from("dietary_requirement").insert(
-      entries.map((e) => ({
-        service_item_id: serviceItemId,
-        participant_id: e.participantId,
-        dietary_code: e.dietaryCode || "NONE",
-        note: e.note?.trim() || null,
-      })),
-    );
+  const write = await supabase.from("dietary_requirement").upsert(rows, { onConflict: "service_item_id,participant_id" });
+  if (write.error) throw write.error;
+  const stale = previous.filter((p) => !rows.some((r) => r.participant_id === p.participant_id)).map((p) => p.id);
+  if (stale.length) {
+    const removed = await supabase.from("dietary_requirement").delete().eq("service_item_id", serviceItemId).in("id", stale);
+    if (removed.error) throw removed.error;
   }
 
   const counts: Record<string, number> = {};
@@ -59,10 +65,12 @@ export async function saveDietaryRequirements(formData: FormData) {
       .map(([code, n]) => `${DIETARY_LABEL[code] ?? code} ${n}명`)
       .join(" · ") || "특이사항 없음";
 
-  await supabase
+  const update = await supabase
     .from("service_item")
-    .update({ note: summary, status: item.status === "DRAFT" ? "REQUESTED" : item.status })
-    .eq("id", serviceItemId);
+    .update({ note: summary, status })
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (update.error || !update.data) throw new Error("식이 요청을 저장하지 못했습니다.");
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }

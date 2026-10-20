@@ -55,6 +55,7 @@ export function ServiceDetails({ item, participants = item.delegation?.participa
   }).join(", ") || "배정 없음";
 
   return <div className="space-y-5">
+    {item.status === "CHANGING" && <p role="status" className="rounded-lg border border-status-action-fg/20 bg-status-action-bg p-4 text-sm leading-6 text-status-action-fg">고객 요청이 변경되어 업체 확인이 필요합니다. 아래 처리 결과는 변경 전에 확정된 정보이며, 새 요청에 맞춰 다시 확인해야 합니다.</p>}
     <div className="grid gap-5 lg:grid-cols-2">
       <section aria-label="고객 요청" className="overflow-hidden rounded-xl border bg-background">
         <div className="flex items-center gap-2 border-b bg-muted/50 px-5 py-4"><FileText className="size-4 text-primary" /><h3 className="font-semibold">고객 요청</h3><span className="ml-auto text-xs text-muted-foreground">고객이 입력한 내용</span></div>

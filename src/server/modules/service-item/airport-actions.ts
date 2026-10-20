@@ -1,8 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
+import { fromFormDateTime } from "@/lib/date";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/date";
+import { replaceServiceDetails } from "@/server/modules/service-item/replace-details";
+import { requestStatus, requestChanged } from "@/lib/service-request-status";
 
 const SCOPE_LABEL: Record<string, string> = {
   GREETING: "영접 인사",
@@ -20,21 +24,26 @@ export async function saveAirportRequest(formData: FormData) {
   if (!serviceItemId) return;
 
   const supabase = await createServerSupabaseClient();
-  const { data: item } = await supabase.from("service_item").select("status").eq("id", serviceItemId).single();
+  const { data: item } = await supabase.from("service_item").select("status, service_type, airport_request(*)").eq("id", serviceItemId).single();
   if (!item) return;
+  if (item.service_type !== "AIRPORT" || scope.some((s) => !Object.hasOwn(SCOPE_LABEL, s))) throw new Error("공항 의전 범위를 확인해 주세요.");
+  const previous = Array.isArray(item.airport_request) ? item.airport_request[0] : item.airport_request;
+  const status = requestStatus(item.status, requestChanged(previous, { scope, note }));
 
-  await supabase.from("airport_request").upsert(
+  const requestResult = await supabase.from("airport_request").upsert(
     { service_item_id: serviceItemId, scope, note, updated_at: new Date().toISOString() },
     { onConflict: "service_item_id" },
   );
+  if (requestResult.error) throw requestResult.error;
 
   const summary = scope.map((s) => SCOPE_LABEL[s]).filter(Boolean).join(" · ") || null;
 
   await supabase
     .from("service_item")
-    .update({ note: summary, status: item.status === "DRAFT" ? "REQUESTED" : item.status })
+    .update({ note: [summary, note].filter(Boolean).join(" · ") || null, status })
     .eq("id", serviceItemId);
 
+  revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }
 
@@ -44,20 +53,19 @@ export async function saveAirportAssignment(formData: FormData) {
   const attendantName = (formData.get("attendantName") as string)?.trim() || null;
   const meetingPoint = (formData.get("meetingPoint") as string)?.trim() || null;
   const meetingAtRaw = formData.get("meetingAt") as string;
-  const meetingAt = meetingAtRaw ? new Date(meetingAtRaw).toISOString() : null;
+  const meetingAt = meetingAtRaw ? fromFormDateTime(meetingAtRaw) : null;
   const note = (formData.get("note") as string)?.trim() || null;
   if (!serviceItemId) return;
 
   const supabase = await createServerSupabaseClient();
 
-  await supabase.from("airport_assignment").delete().eq("service_item_id", serviceItemId);
-  await supabase.from("airport_assignment").insert({
+  await replaceServiceDetails(supabase, "airport_assignment", serviceItemId, [{
     service_item_id: serviceItemId,
     attendant_name: attendantName,
     meeting_point: meetingPoint,
     meeting_at: meetingAt,
     note,
-  });
+  }]);
 
   const confirmationNote = [
     attendantName && `담당 ${attendantName}`,
@@ -72,5 +80,5 @@ export async function saveAirportAssignment(formData: FormData) {
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
     .eq("id", serviceItemId);
 
-  revalidatePath("/vendor");
+  revalidateLinkedViews();
 }

@@ -121,11 +121,11 @@ function CreateProgramDialog({
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="startAt">시작 일시 (선택, 가안 단계에서는 미정 가능)</Label>
+                  <Label htmlFor="startAt">시작 일시 (서울 GMT+9, 선택)</Label>
                 <Input id="startAt" name="startAt" type="datetime-local" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="endAt">종료 일시 (선택)</Label>
+                  <Label htmlFor="endAt">종료 일시 (서울 GMT+9, 선택)</Label>
                 <Input id="endAt" name="endAt" type="datetime-local" />
               </div>
             </div>

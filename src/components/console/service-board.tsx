@@ -35,7 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { BlankScreen } from "@/components/shared/blank-screen";
-import { createServiceItem, deleteServiceItem } from "@/server/modules/service-item/actions";
+import { createServiceItem, deleteServiceItem, assignServiceVendor } from "@/server/modules/service-item/actions";
 import { saveAirportRequest } from "@/server/modules/service-item/airport-actions";
 import { formatDateTime } from "@/lib/date";
 import {
@@ -203,7 +203,7 @@ function AddServiceItemDialog({
   );
 }
 
-function ServiceItemTableRow({ item, eventId }: { item: ServiceItemRow; eventId: string }) {
+function ServiceItemTableRow({ item, eventId, eventVendors, canEdit }: { item: ServiceItemRow; eventId: string; eventVendors: EventVendorOption[]; canEdit: boolean }) {
   const [scopeOpen, setScopeOpen] = useState(false);
   return (
     <TableRow>
@@ -214,19 +214,26 @@ function ServiceItemTableRow({ item, eventId }: { item: ServiceItemRow; eventId:
       <TableCell className="text-muted-foreground">
         {item.support_type ? SUPPORT_TYPE_LABEL[item.support_type] : "-"}
       </TableCell>
-      <TableCell className="text-muted-foreground">{item.event_vendor?.vendor?.name ?? "미지정"}</TableCell>
+      <TableCell className="text-muted-foreground">
+        {canEdit ? <form action={assignServiceVendor} className="flex items-center gap-2">
+          <input type="hidden" name="id" value={item.id} /><input type="hidden" name="eventId" value={eventId} />
+          <select name="eventVendorId" aria-label={`${item.delegation?.name} 담당 업체`} defaultValue={item.event_vendor?.id ?? ""} className="max-w-48 rounded-md border bg-background px-2 py-1.5 text-sm" required>
+            <option value="" disabled>담당 업체 선택</option>{eventVendors.filter((v) => v.service_types.includes(item.service_type)).map((v) => <option key={v.id} value={v.id}>{v.vendor?.name}</option>)}
+          </select><Button type="submit" size="sm" variant="outline">배정</Button>
+        </form> : item.event_vendor?.vendor?.name ?? "미지정"}
+      </TableCell>
       <TableCell className="text-muted-foreground">
         {item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "-"}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
           <ServiceDetailDialog item={item} />
-          {item.service_type === "AIRPORT" && (
+          {canEdit && item.service_type === "AIRPORT" && (
             <Button type="button" variant="ghost" size="sm" onClick={() => setScopeOpen(true)}>
               의전 범위
             </Button>
           )}
-          {item.status === "DRAFT" && (
+          {canEdit && item.status === "DRAFT" && (
             <form action={deleteServiceItem}>
               <input type="hidden" name="id" value={item.id} />
               <input type="hidden" name="eventId" value={eventId} />
@@ -253,24 +260,26 @@ function ServiceTypeTable({
   items,
   delegations,
   eventVendors,
+  canEdit,
 }: {
   eventId: string;
   serviceType: string;
   items: ServiceItemRow[];
   delegations: DelegationOption[];
   eventVendors: EventVendorOption[];
+  canEdit: boolean;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const columns = SERVICE_TYPE_COLUMN_LABELS[serviceType];
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      {canEdit && <div className="flex justify-end">
         <Button onClick={() => setAddOpen(true)}>
           <Plus className="size-4" />
           항목 추가
         </Button>
-      </div>
+      </div>}
       {items.length === 0 ? (
         <BlankScreen title="아직 항목이 없습니다" note="대리인 요청 입력 화면은 다음 조각에서 연결합니다. 지금은 PCO가 직접 추가할 수 있습니다." />
       ) : (
@@ -287,7 +296,7 @@ function ServiceTypeTable({
           </TableHeader>
           <TableBody>
             {items.map((item) => (
-              <ServiceItemTableRow key={item.id} item={item} eventId={eventId} />
+              <ServiceItemTableRow key={item.id} item={item} eventId={eventId} eventVendors={eventVendors} canEdit={canEdit} />
             ))}
           </TableBody>
         </Table>
@@ -309,11 +318,13 @@ export function ServiceBoard({
   items,
   delegations,
   eventVendors,
+  canEdit,
 }: {
   eventId: string;
   items: ServiceItemRow[];
   delegations: DelegationOption[];
   eventVendors: EventVendorOption[];
+  canEdit: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -334,6 +345,7 @@ export function ServiceBoard({
               items={items.filter((i) => i.service_type === t.value)}
               delegations={delegations}
               eventVendors={eventVendors}
+              canEdit={canEdit}
             />
           </TabsContent>
         ))}

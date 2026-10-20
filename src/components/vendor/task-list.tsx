@@ -36,7 +36,7 @@ import {
   SERVICE_STATUS_LABEL,
   SERVICE_STATUS_BADGE,
 } from "@/lib/service-item-constants";
-import { formatDateTime } from "@/lib/date";
+import { formatDateTime, toFormDateTime } from "@/lib/date";
 
 interface FlightRequestRow {
   inbound_origin_city: string | null;
@@ -197,8 +197,8 @@ function toDraft(row: FlightSegmentRow, key: string): SegmentDraft {
     flightNo: row.flight_no ?? "",
     depAirport: row.dep_airport ?? "",
     arrAirport: row.arr_airport ?? "",
-    depAt: row.dep_at ? row.dep_at.slice(0, 16) : "",
-    arrAt: row.arr_at ? row.arr_at.slice(0, 16) : "",
+    depAt: row.dep_at ? toFormDateTime(row.dep_at) : "",
+    arrAt: row.arr_at ? toFormDateTime(row.arr_at) : "",
     cabinClass: row.cabin_class ?? "",
     pnr: row.pnr ?? "",
     ticketNo: row.ticket_no ?? "",
@@ -302,7 +302,7 @@ function SegmentEditor({
           <div className="flex flex-col gap-1">
             <Label className="text-xs">발권 상태</Label>
             <Select value={s.ticketStatus} onValueChange={(v) => update(s.key, { ticketStatus: v ?? "BOOKED" })}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue>{TICKET_STATUS_LABEL[s.ticketStatus] ?? s.ticketStatus}</SelectValue></SelectTrigger>
               <SelectContent>
                 {Object.entries(TICKET_STATUS_LABEL).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -379,8 +379,8 @@ function toRoomDraft(row: RoomAssignmentRow, key: string): RoomDraft {
     hotelName: row.hotel_name ?? "",
     roomType: row.room_type ?? "",
     participantIds: row.participant_ids ?? [],
-    checkInAt: row.check_in_at ? row.check_in_at.slice(0, 16) : "",
-    checkOutAt: row.check_out_at ? row.check_out_at.slice(0, 16) : "",
+    checkInAt: row.check_in_at ? toFormDateTime(row.check_in_at) : "",
+    checkOutAt: row.check_out_at ? toFormDateTime(row.check_out_at) : "",
     confirmationNo: row.confirmation_no ?? "",
     roomNo: row.room_no ?? "",
     note: row.note ?? "",
@@ -548,7 +548,7 @@ function toVehicleDraft(row: VehicleDispatchRow, key: string): VehicleDraft {
     key,
     fromText: row.from_text ?? "",
     toText: row.to_text ?? "",
-    departAt: row.depart_at ? row.depart_at.slice(0, 16) : "",
+    departAt: row.depart_at ? toFormDateTime(row.depart_at) : "",
     vehicleClass: row.vehicle_class ?? "",
     plateNo: row.plate_no ?? "",
     driverName: row.driver_name ?? "",
@@ -563,7 +563,7 @@ function emptyVehicleDraft(transferRequest: TransferRequestRow | null): VehicleD
     key: `vehicle-${Math.random().toString(36).slice(2)}`,
     fromText: transferRequest?.from_text ?? "",
     toText: transferRequest?.to_text ?? "",
-    departAt: transferRequest?.scheduled_at ? transferRequest.scheduled_at.slice(0, 16) : "",
+    departAt: transferRequest?.scheduled_at ? toFormDateTime(transferRequest.scheduled_at) : "",
     vehicleClass: "",
     plateNo: "",
     driverName: "",
@@ -740,7 +740,7 @@ function AirportConfirmForm({ item, onClose }: { item: VendorTaskRow; onClose: (
           id="meetingAt"
           name="meetingAt"
           type="datetime-local"
-          defaultValue={existing?.meeting_at ? existing.meeting_at.slice(0, 16) : ""}
+          defaultValue={existing?.meeting_at ? toFormDateTime(existing.meeting_at) : ""}
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -811,6 +811,7 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>확정 정보 입력</DialogTitle>
+          <p className="text-sm text-muted-foreground">일시는 모두 서울 시간(GMT+9) 기준으로 입력합니다.</p>
         </DialogHeader>
         {item.service_type === "FLIGHT" ? (
           <FlightConfirmForm item={item} onClose={close} />

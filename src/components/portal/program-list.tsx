@@ -16,7 +16,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatDateTime } from "@/lib/date";
+import { formatDateTime, fromFormDateTime } from "@/lib/date";
 import {
   PROGRAM_TYPE_LABEL,
   PROGRAM_STATUS_LABEL,
@@ -120,7 +120,7 @@ function RegisterSelfScheduledDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const [startAt, setStartAt] = useState("");
-  const hoursUntilStart = startAt ? (new Date(startAt).getTime() - Date.now()) / 3600000 : null;
+  const [hoursUntilStart, setHoursUntilStart] = useState<number | null>(null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,8 +138,8 @@ function RegisterSelfScheduledDialog({
               <Input id="ss-name" name="name" placeholder="예: 대사관 교민 간담회" required />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="ss-startAt">일시</Label>
-              <Input id="ss-startAt" name="startAt" type="datetime-local" required value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+              <Label htmlFor="ss-startAt">일시 (서울 GMT+9)</Label>
+              <Input id="ss-startAt" name="startAt" type="datetime-local" required value={startAt} onChange={(e) => { const value = e.target.value; setStartAt(value); setHoursUntilStart(value ? (new Date(fromFormDateTime(value)).getTime() - Date.now()) / 3600000 : null); }} />
               {hoursUntilStart !== null && hoursUntilStart < 24 && hoursUntilStart > 0 && (
                 <p className="text-xs text-status-urgent-fg">⚠️ 시작까지 24시간이 남지 않아 배차가 어려울 수 있습니다</p>
               )}

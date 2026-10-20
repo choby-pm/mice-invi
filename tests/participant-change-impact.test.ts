@@ -60,7 +60,9 @@ describe("참가자 추가·삭제 영향 규칙 (evaluate_participant_change_im
       .eq("delegation_id", delegation.id)
       .eq("service_type", "LODGING")
       .single();
-    await pco.client.from("service_item").update({ event_vendor_id: hotelEv!.id, status: "CONFIRMED" }).eq("id", lodgingItem!.id);
+    await pco.client.from("service_item").update({ event_vendor_id: hotelEv!.id, status: "REQUESTED" }).eq("id", lodgingItem!.id);
+    const confirmed = await pco.client.from("service_item").update({ status: "CONFIRMED" }).eq("id", lodgingItem!.id);
+    if (confirmed.error) throw confirmed.error;
   });
 
   afterAll(async () => {

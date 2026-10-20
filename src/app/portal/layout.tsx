@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { WorkspaceLink } from "@/components/shared/workspace-link";
 import { getMessages } from "@/i18n/get-messages";
 import { setLocale } from "@/server/i18n/set-locale";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,9 @@ export default async function PortalLayout({ children }: { children: React.React
       <main className="flex-1 px-4 py-6">{children}</main>
       <nav className="grid grid-cols-4 gap-1 border-t px-2 py-2">
         {nav.map((item) => (
-          <Link key={item.href} href={item.href} className="rounded-md px-2 py-2 text-center text-sm text-muted-foreground hover:bg-muted">
+          <WorkspaceLink key={item.href} href={item.href} className="rounded-md px-2 py-2 text-center text-sm text-muted-foreground hover:bg-muted">
             {item.label}
-          </Link>
+          </WorkspaceLink>
         ))}
       </nav>
       <form action={portalLogout} className="border-t px-4 py-2">

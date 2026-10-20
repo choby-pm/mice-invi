@@ -41,7 +41,7 @@ export function serviceSummary(item: ServiceDetailsItem) {
 }
 
 function Field({ label, value }: { label: string; value?: string | number | null }) {
-  return <div className="min-w-0 space-y-1"><dt className="text-xs font-medium text-muted-foreground">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm leading-6">{value === null || value === undefined || value === "" ? <span className="text-muted-foreground">미입력</span> : value}</dd></div>;
+  return <div className="min-w-0 space-y-1"><dt className="text-sm font-medium text-muted-foreground">{label}</dt><dd className="whitespace-pre-wrap break-words text-base font-medium leading-7">{value === null || value === undefined || value === "" ? <span className="text-muted-foreground">미입력</span> : value}</dd></div>;
 }
 
 export function ServiceDetails({ item, participants = item.delegation?.participant ?? [] }: { item: ServiceDetailsItem; participants?: Person[] }) {

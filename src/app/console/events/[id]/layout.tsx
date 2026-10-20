@@ -1,3 +1,4 @@
+import { WorkspaceLink } from "@/components/shared/workspace-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users, AlertTriangle, Table2, Building2, LogOut, ClipboardList, FileCheck2, CalendarDays } from "lucide-react";
@@ -81,7 +82,7 @@ export default async function EventLayout({
               <SidebarMenu>
                 {nav.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton render={<Link href={item.href} />} tooltip={item.label}>
+                    <SidebarMenuButton render={<WorkspaceLink href={item.href} />} tooltip={item.label}>
                       <item.icon />
                       <span>{item.label}</span>
                       {"badge" in item && (item.badge ?? 0) > 0 && (
@@ -108,12 +109,12 @@ export default async function EventLayout({
           </form>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4">
+      <SidebarInset className="min-w-0 bg-muted/40">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 sm:px-8">
           <SidebarTrigger />
           <span className="text-sm text-muted-foreground">{event.name}</span>
         </header>
-        <div className="flex-1 p-6">{children}</div>
+        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

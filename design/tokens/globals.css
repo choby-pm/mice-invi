@@ -24,7 +24,7 @@
   --secondary: hsl(214 32% 95%);
   --secondary-foreground: hsl(222 47% 15%);
   --muted: hsl(214 30% 96%);
-  --muted-foreground: hsl(215 16% 42%);
+  --muted-foreground: hsl(215 18% 36%);
   --accent: hsl(214 40% 94%);
   --accent-foreground: hsl(215 55% 22%);
   --destructive: hsl(0 72% 50%);
@@ -114,7 +114,7 @@
 }
 
 @theme inline {
-  --font-sans: "IBM Plex Sans KR", "Noto Sans JP", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-sans: var(--font-pretendard), "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -173,7 +173,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-size: 14px; /* 운영 도구 기본 (UD-10). 대리인 포털 레이아웃에서 16px로 올림 */
+    @apply bg-background font-sans text-foreground;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    font-size: 15px; /* 운영 도구 기본 (UD-10). 대리인 포털 레이아웃에서 16px로 올림 */
   }
 }

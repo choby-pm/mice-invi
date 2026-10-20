@@ -1,3 +1,4 @@
+import { WorkspaceLink } from "@/components/shared/workspace-link";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { vendorLogout } from "@/server/modules/iam/vendor-auth-actions";
@@ -24,9 +25,9 @@ export default async function VendorLayout({ children }: { children: React.React
           <Link href="/vendor" className="flex items-center gap-3"><span className="rounded-xl bg-primary p-2.5 text-primary-foreground"><Plane className="size-5" /></span><span><span className="block text-base font-semibold">MICE INVI</span><span className="text-xs text-muted-foreground">파트너 업무공간</span></span></Link>
           <nav className="flex gap-2 rounded-lg bg-muted/60 p-1">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-background hover:text-primary">
+              <WorkspaceLink key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-background hover:text-primary">
                 {item.label}
-              </Link>
+              </WorkspaceLink>
             ))}
           </nav>
         </div>

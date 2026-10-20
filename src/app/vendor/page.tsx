@@ -30,9 +30,9 @@ export default async function VendorHomePage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2"><p className="text-xs font-semibold uppercase tracking-widest text-primary">PARTNER WORKSPACE</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{flightDemo ? "항공 업무" : "통합 할 일"}</h1><p className="text-sm leading-6 text-muted-foreground">고객 요청부터 예약·확정까지, 대표단별 업무를 한눈에 확인하세요. 상세 보기에서 입력된 전체 내용을 확인할 수 있습니다.</p></div>
-      <ServiceUpdates audience="vendor" />
       <AdjustmentList items={(adjustmentResult.data ?? []) as never} />
       <TaskList items={(serviceResult.data ?? []) as never} />
+      <ServiceUpdates audience="vendor" />
     </div>
   );
 }

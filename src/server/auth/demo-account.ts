@@ -7,7 +7,7 @@ import { demoId, SERVICE_TYPES } from "../../../scripts/demo-data.mjs";
 const PCO_ROLES = { pco: "PCO_ADMIN", manager: "PCO_MANAGER", field: "PCO_FIELD" } as const;
 const tenantId = demoId("tenant");
 const vendorIds = SERVICE_TYPES.map((type) => demoId(`vendor:${type}`));
-const delegationIds = ["VN", "JP", "SG", "FR"].map((country) => demoId(`delegation:${country}`));
+const delegationIds = [demoId("delegation:VN")];
 
 export async function getDemoAccount(role: DemoRole) {
   const admin = createAdminClient();
@@ -21,7 +21,7 @@ export async function getDemoAccount(role: DemoRole) {
     admin.auth.admin.getUserById(member.user_id),
     admin.from("tenant_member").select("tenant_id, role").eq("user_id", member.user_id),
     admin.from("vendor_member").select("vendor_id").eq("user_id", member.user_id),
-    admin.from("delegation_proxy").select("delegation_id").eq("user_id", member.user_id),
+    admin.from("delegation_proxy").select("delegation_id").eq("user_id", member.user_id).eq("status", "ACTIVE"),
   ]);
   if (account.error || !account.data.user) throw new Error("데모 계정을 확인할 수 없습니다.");
   const user = account.data.user;
@@ -41,7 +41,7 @@ export function assertDemoAccount(
   const validScope = role === "vendor"
     ? !tenants.length && !delegations.length && vendors.length > 0 && vendors.every((v) => vendorIds.includes(v.vendor_id))
     : role === "proxy"
-      ? !tenants.length && !vendors.length && delegations.length > 0 && delegations.every((d) => delegationIds.includes(d.delegation_id))
+      ? !tenants.length && !vendors.length && delegations.length === 1 && delegations[0].delegation_id === delegationIds[0]
       : !vendors.length && !delegations.length && tenants.length === 1 && tenants[0].tenant_id === tenantId && tenants[0].role === PCO_ROLES[role];
   if (!validIdentity || !validScope) throw new Error("데모 전용 계정만 사용할 수 있습니다.");
 }

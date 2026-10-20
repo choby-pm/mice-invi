@@ -57,6 +57,14 @@ describe("데모 계정 범위", () => {
     expect(() => assertDemoAccount("vendor", identity("vendor"), member, [{ vendor_id: demoId("vendor:FLIGHT") }], [])).toThrow();
     expect(() => assertDemoAccount("proxy", identity("proxy"), [], [], [])).toThrow();
   });
+
+  it("대리인 데모는 베트남 하나만 허용하고 다른 국가 또는 복수 배정을 거부", () => {
+    const vn = { delegation_id: demoId("delegation:VN") };
+    const jp = { delegation_id: demoId("delegation:JP") };
+    expect(() => assertDemoAccount("proxy", identity("proxy"), [], [], [vn])).not.toThrow();
+    expect(() => assertDemoAccount("proxy", identity("proxy"), [], [], [jp])).toThrow();
+    expect(() => assertDemoAccount("proxy", identity("proxy"), [], [], [vn, jp])).toThrow();
+  });
 });
 
 describe("데모 로그인", () => {

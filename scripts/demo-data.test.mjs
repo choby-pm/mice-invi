@@ -6,6 +6,10 @@ import { buildDemoData, demoId, SERVICE_TYPES } from "./demo-data.mjs";
 const users = Object.fromEntries(["pco", "manager", "field", "vendor", "proxy"].map((role) => [role, demoId(`user:${role}`)]));
 const data = buildDemoData(users);
 
+test("proxy demo has exactly one active country assignment", () => {
+  assert.deepEqual(data.delegation_proxy.map((row) => ({ delegation_id: row.delegation_id, status: row.status })), [{ delegation_id: demoId("delegation:VN"), status: "ACTIVE" }]);
+});
+
 test("stable unique IDs, all relationships stay inside the demo tenant", () => {
   assert.deepEqual(buildDemoData(users), data);
   const ids = new Set(Object.values(data).flat().map((row) => row.id));

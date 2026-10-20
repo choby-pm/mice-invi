@@ -54,7 +54,7 @@ export function buildDemoData(users, serviceIds = {}) {
       organization: `${name} 데모 국제협력원`, invite_status, rsvp, owner_user_id: users.pco,
       protocol_level_id: levels[index % levels.length], preferred_language: index % 2 ? "en" : "ko",
       completeness: [100, 80, 40, 10, 0, 0][index], internal_note: "가상 인물·기관으로 구성한 데모 데이터입니다." });
-    if (index < 4) add("delegation_proxy", country, { tenant_id, delegation_id, user_id: users.proxy, status: "ACTIVE" });
+    if (country === "VN") add("delegation_proxy", country, { tenant_id, delegation_id, user_id: users.proxy, status: "ACTIVE" });
     const participants = ["VIP", "COMPANION", "STAFF"].map((participant_type, i) =>
       add("participant", `${country}:${i}`, { tenant_id, delegation_id, participant_type,
         last_name: `Demo${country}`, first_name: ["Alex", "Robin", "Sam"][i],

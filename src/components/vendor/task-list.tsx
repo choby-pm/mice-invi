@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ServiceDetailDialog } from "@/components/shared/service-detail-dialog";
+import { FlightBookingIdentityPanel } from "@/components/vendor/flight-booking-identity";
 import { serviceSummary } from "@/components/shared/service-details";
 import { Plus, X, Search, Users, CalendarDays, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -813,6 +814,7 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
           <DialogTitle>확정 정보 입력</DialogTitle>
           <p className="text-sm text-muted-foreground">일시는 모두 서울 시간(GMT+9) 기준으로 입력합니다.</p>
         </DialogHeader>
+          {open && item.service_type === "FLIGHT" && <FlightBookingIdentityPanel serviceItemId={item.id} />}
         {item.service_type === "FLIGHT" ? (
           <FlightConfirmForm item={item} onClose={close} />
         ) : item.service_type === "LODGING" ? (
@@ -843,7 +845,7 @@ function TaskRow({ item, readOnly }: { item: VendorTaskRow; readOnly: boolean })
         <div className="min-w-0"><p className="mb-2 text-xs font-medium text-muted-foreground">요청 여정 · 주요 내용</p><p className="break-words text-base font-semibold leading-7">{serviceSummary(item)}</p>{item.flight_request && <p className="mt-1 text-sm text-muted-foreground">{firstOrNull(item.flight_request)?.note || "추가 요청 메모 없음"}</p>}</div>
         <div className="space-y-2 text-sm"><p className="flex items-start gap-2"><CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" />{item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "희망 일정 미입력"}</p><p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" />참가자 {item.delegation?.participant?.length ?? 0}명</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <ServiceDetailDialog item={item} />
+          <ServiceDetailDialog item={item} flightBooking />
           {!readOnly && item.status === "CANCEL_REQ" && <form action={confirmServiceCancellation} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={item.id}/><Input name="confirmationNote" aria-label="취소 결과와 비용" placeholder="취소 결과·수수료 (필수)" required maxLength={2000}/><Button type="submit" size="sm" variant="destructive">취소 반영 완료</Button></form>}
           {!readOnly && item.status === "REQUESTED" && (
           <form action={startServiceItem}>
@@ -886,7 +888,7 @@ export function TaskList({ items, readOnly = false }: { items: VendorTaskRow[]; 
   }
 
   return <div className="space-y-5">
-    {!readOnly && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{groups.map((g) => <button key={g.key} type="button" onClick={() => setGroup(g.key)} aria-pressed={group === g.key} className={`rounded-xl border bg-background p-4 text-left transition-colors hover:border-primary/50 ${group === g.key ? "border-primary ring-1 ring-primary" : ""}`}><span className="text-sm text-muted-foreground">{g.label}</span><span className="mt-2 block text-3xl font-semibold tabular-nums">{items.filter((i) => !g.states || g.states.includes(i.status)).length}</span></button>)}</div>}
+    {!readOnly && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{groups.map((g) => <button key={g.key} type="button" onClick={() => setGroup(g.key)} aria-pressed={group === g.key} className={`rounded-xl border bg-background p-4 text-left transition-colors hover:border-primary/50 ${group === g.key ? "border-primary bg-primary/5 ring-1 ring-primary" : ""}`}><span className="text-sm text-muted-foreground">{g.label}</span><span className="mt-2 block text-3xl font-semibold tabular-nums">{items.filter((i) => !g.states || g.states.includes(i.status)).length}</span></button>)}</div>}
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-4">
       <div className="relative w-full sm:max-w-md"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="대표단·노선·편명 검색" placeholder="대표단, 노선 또는 편명으로 검색" className="h-10 pl-9" /></div>
       <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground">{visible.length}건</span><Button variant="outline" size="sm" disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />새로고침</Button></div>

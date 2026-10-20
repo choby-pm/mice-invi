@@ -107,6 +107,7 @@ function AddParticipantDialog({
               <Label htmlFor="nationality">국적</Label>
               <Input id="nationality" name="nationality" placeholder="예: VN" required />
             </div>
+            <div className="grid grid-cols-2 gap-3"><div className="flex flex-col gap-1.5"><Label htmlFor="birthDate">생년월일 (선택)</Label><Input id="birthDate" name="birthDate" type="date" /></div><div className="flex flex-col gap-1.5"><Label htmlFor="gender">여권상 성별 (선택)</Label><select id="gender" name="gender" className="h-9 rounded-md border bg-background px-3 text-sm"><option value="">미입력</option><option value="M">남 / M</option><option value="F">여 / F</option><option value="X">X</option></select></div></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="honorific">호칭 (선택)</Label>
@@ -140,12 +141,15 @@ function SensitiveInfoSheet({
   onOpenChange: (v: boolean) => void;
 }) {
   const [revealed, setRevealed] = useState<ParticipantSensitiveData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handleReveal() {
     startTransition(async () => {
-      const data = await viewParticipantSensitive(participant.id);
-      setRevealed(
+      setError(null);
+      try {
+        const data = await viewParticipantSensitive(participant.id);
+        setRevealed(
         data ?? {
           passport_no: null,
           passport_country: null,
@@ -156,7 +160,8 @@ function SensitiveInfoSheet({
           religion: null,
           purge_status: null,
         },
-      );
+        );
+      } catch (cause) { setError(cause instanceof Error ? cause.message : "정보를 열람하지 못했습니다."); }
     });
   }
 
@@ -165,7 +170,7 @@ function SensitiveInfoSheet({
       open={open}
       onOpenChange={(v) => {
         onOpenChange(v);
-        if (!v) setRevealed(null);
+        if (!v) { setRevealed(null); setError(null); }
       }}
     >
       <SheetContent className="gap-0">
@@ -177,6 +182,7 @@ function SensitiveInfoSheet({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {error && <p role="alert" className="pt-3 text-sm text-status-urgent-fg">{error}</p>}
           {revealed === null ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <p className="text-sm text-muted-foreground">
@@ -191,6 +197,9 @@ function SensitiveInfoSheet({
             <form action={saveParticipantSensitive} className="flex flex-col gap-3 pt-2">
               <input type="hidden" name="participantId" value={participant.id} />
               <input type="hidden" name="revalidateTo" value={revalidateTo} />
+              <div className="grid grid-cols-2 gap-3"><div className="flex flex-col gap-1.5"><Label htmlFor={`booking-last-${participant.id}`}>여권상 영문 성</Label><Input id={`booking-last-${participant.id}`} name="lastName" defaultValue={revealed.last_name ?? participant.last_name} required maxLength={120}/></div><div className="flex flex-col gap-1.5"><Label htmlFor={`booking-first-${participant.id}`}>여권상 영문 이름</Label><Input id={`booking-first-${participant.id}`} name="firstName" defaultValue={revealed.first_name ?? participant.first_name} required maxLength={120}/></div></div>
+              <div className="flex flex-col gap-1.5"><Label htmlFor={`booking-nationality-${participant.id}`}>국적</Label><Input id={`booking-nationality-${participant.id}`} name="nationality" defaultValue={revealed.nationality ?? ""} required maxLength={120}/></div>
+              <div className="grid grid-cols-2 gap-3"><div className="flex flex-col gap-1.5"><Label htmlFor={`booking-birth-${participant.id}`}>생년월일</Label><Input id={`booking-birth-${participant.id}`} name="birthDate" type="date" defaultValue={revealed.birth_date ?? ""}/></div><div className="flex flex-col gap-1.5"><Label htmlFor={`booking-gender-${participant.id}`}>여권상 성별</Label><select id={`booking-gender-${participant.id}`} name="gender" defaultValue={revealed.gender ?? ""} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="">미입력</option><option value="M">남 / M</option><option value="F">여 / F</option><option value="X">X</option></select></div></div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="passportNo">여권번호</Label>

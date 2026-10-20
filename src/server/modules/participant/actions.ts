@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
+import { bookingBasics } from "@/lib/booking-basics";
 
 // PCO 콘솔과 대리인 포털 양쪽에서 씁니다 — 권한 판단은 RLS(participant_insert:
 // PCO 관리자·담당자 또는 is_active_proxy)에 맡기고, 여기서는 역할을 따로 가리지
@@ -17,12 +18,13 @@ export async function createParticipant(formData: FormData) {
   const honorific = (formData.get("honorific") as string)?.trim() || null;
   const title = (formData.get("title") as string)?.trim() || null;
   if (!delegationId || !participantType || !lastName || !firstName || !nationality) return;
+  const identity = bookingBasics(formData);
 
   const supabase = await createServerSupabaseClient();
   const { data: delegation } = await supabase.from("delegation").select("tenant_id").eq("id", delegationId).single();
   if (!delegation) return; // RLS로 안 보이면 여기서 걸러짐
 
-  const { data: participant } = await supabase
+  const { data: participant, error } = await supabase
     .from("participant")
     .insert({
       tenant_id: delegation.tenant_id,
@@ -33,9 +35,11 @@ export async function createParticipant(formData: FormData) {
       nationality,
       honorific,
       title,
+      ...identity,
     })
     .select("id")
     .single();
+  if (error || !participant) throw new Error("참가자를 저장하지 못했습니다. 입력 내용과 담당 범위를 확인해 주세요.");
   // 첫 입력 저장 (S02: OPENED --> IN_PROGRESS)
   await supabase.from("delegation").update({ invite_status: "IN_PROGRESS" }).eq("id", delegationId).eq("invite_status", "OPENED");
 

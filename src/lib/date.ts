@@ -11,9 +11,10 @@ const MONTHS_EN = [
  */
 export function formatDate(date: Date | string, locale: SupportedLocale): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  const day = d.getDate();
-  const month = d.getMonth();
-  const year = d.getFullYear();
+  const dateOnly = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const day = dateOnly ? d.getUTCDate() : d.getDate();
+  const month = dateOnly ? d.getUTCMonth() : d.getMonth();
+  const year = dateOnly ? d.getUTCFullYear() : d.getFullYear();
   if (locale === "en") return `${day} ${MONTHS_EN[month]} ${year}`;
   return `${year}년 ${month + 1}월 ${day}일`;
 }

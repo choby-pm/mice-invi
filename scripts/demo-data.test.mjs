@@ -9,6 +9,9 @@ const data = buildDemoData(users);
 test("proxy demo has exactly one active country assignment", () => {
   assert.deepEqual(data.delegation_proxy.map((row) => ({ delegation_id: row.delegation_id, status: row.status })), [{ delegation_id: demoId("delegation:VN"), status: "ACTIVE" }]);
 });
+test("vendor demo belongs only to the aviation company", () => {
+  assert.deepEqual(data.vendor_member.map((row) => ({ vendor_id: row.vendor_id, status: row.status })), [{ vendor_id: demoId("vendor:FLIGHT"), status: "ACTIVE" }]);
+});
 
 test("stable unique IDs, all relationships stay inside the demo tenant", () => {
   assert.deepEqual(buildDemoData(users), data);

@@ -25,7 +25,7 @@ export async function getConsentChecklist(eventId: string, participantId: string
 
   const [{ data: items }, { data: records }] = await Promise.all([
     supabase.from("consent_item").select("id, category, text, required").eq("policy_id", policy.id).order("sort_order"),
-    supabase.from("consent_record").select("item_id").eq("participant_id", participantId).eq("status", "VALID"),
+    supabase.from("consent_record").select("item_id").eq("participant_id", participantId).eq("status", "VALID").eq("agreed", true).eq("policy_version", policy.version),
   ]);
   const agreedIds = new Set((records ?? []).map((r) => r.item_id));
 
@@ -35,8 +35,7 @@ export async function getConsentChecklist(eventId: string, participantId: string
   };
 }
 
-// BR-05-1: 동의하지 않으면 해당 항목(여권 등) 입력을 막는 로직은 다음 조각에서 화면에 반영합니다.
-// 여기서는 동의 자체를 기록합니다 — 정보주체(참가자) 단위, 동의자는 로그인한 대리인.
+// 체크 해제는 철회로 저장하며 소속 검증과 저장을 DB 안에서 한 번에 처리합니다.
 export async function submitConsent(formData: FormData) {
   const participantId = formData.get("participantId") as string;
   const delegationId = formData.get("delegationId") as string;
@@ -46,28 +45,8 @@ export async function submitConsent(formData: FormData) {
   if (!participantId || !delegationId) return;
 
   const supabase = await createServerSupabaseClient();
-  const [{ data: delegation }, { data: { user } }] = await Promise.all([
-    supabase.from("delegation").select("tenant_id").eq("id", delegationId).single(),
-    supabase.auth.getUser(),
-  ]);
-  if (!delegation) return;
-
-  for (const itemId of itemIds) {
-    await supabase.from("consent_record").upsert(
-      {
-        tenant_id: delegation.tenant_id,
-        delegation_id: delegationId,
-        item_id: itemId,
-        participant_id: participantId,
-        proxy_user_id: user?.id,
-        agreed: true,
-        policy_version: policyVersion,
-        status: "VALID",
-        agreed_at: new Date().toISOString(),
-      },
-      { onConflict: "item_id,participant_id" },
-    );
-  }
+  const result = await supabase.rpc("submit_participant_consent", { p_participant_id: participantId, p_delegation_id: delegationId, p_policy_version: policyVersion, p_item_ids: itemIds });
+  if (result.error) throw new Error("동의를 저장하지 못했습니다. 현재 동의서와 참가자를 다시 확인해 주세요.");
   revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
 }

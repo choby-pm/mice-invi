@@ -15,7 +15,7 @@ export default async function DelegationDetailPage({
   const supabase = await createServerSupabaseClient();
   const { data: delegation } = await supabase
     .from("delegation")
-    .select("id, name, country, organization, invite_code")
+    .select("id, name, country, organization, invite_code, delegation_internal(note)")
     .eq("id", delegationId)
     .single();
   if (!delegation) notFound();
@@ -53,6 +53,7 @@ export default async function DelegationDetailPage({
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           {delegation.organization} · {delegation.country}
+          {(delegation.delegation_internal as unknown as { note: string } | null)?.note && <p className="mt-3 whitespace-pre-wrap">PCO 내부 메모 · {(delegation.delegation_internal as unknown as { note: string }).note}</p>}
         </CardContent>
       </Card>
 

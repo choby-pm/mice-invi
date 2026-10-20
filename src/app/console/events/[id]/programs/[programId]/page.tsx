@@ -15,7 +15,7 @@ export default async function ProgramDetailPage({
   const [{ data: program }, { data: attendance }, { data: delegations }] = await Promise.all([
     supabase
       .from("program")
-      .select("id, name, program_type, organizer_type, organizer_delegation:organizer_delegation_id(name), registered_by_type, transfer_needed, late_registration, pco_adjust_note, start_at, end_at, venue, venue_address, visibility, dress_code, status, internal_note")
+      .select("id, name, program_type, organizer_type, organizer_delegation:organizer_delegation_id(name), registered_by_type, transfer_needed, late_registration, pco_adjust_note, start_at, end_at, venue, venue_address, visibility, dress_code, status, program_internal(note)")
       .eq("id", programId)
       .single(),
     supabase
@@ -40,7 +40,7 @@ export default async function ProgramDetailPage({
       </Link>
       <ProgramDetail
         eventId={eventId}
-        program={program as never}
+        program={{ ...program, internal_note: (program.program_internal as unknown as { note: string } | null)?.note ?? null } as never}
         attendance={(attendance ?? []) as never}
         delegations={(delegations ?? []) as never}
         revalidateTo={revalidateTo}

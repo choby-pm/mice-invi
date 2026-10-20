@@ -21,7 +21,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { addEventVendor, removeEventVendor } from "@/server/modules/event-vendor/actions";
+import { addEventVendor, removeEventVendor, setVendorSettlement } from "@/server/modules/event-vendor/actions";
 
 const SERVICE_TYPES = [
   { value: "FLIGHT", label: "항공" },
@@ -34,6 +34,7 @@ const SERVICE_TYPES = [
 interface EventVendorRow {
   id: string;
   service_types: string[];
+  settled_at?: string | null;
   vendor: { id: string; name: string } | null;
 }
 
@@ -79,10 +80,12 @@ export function VendorBoard({
   eventId,
   eventVendors,
   taskCountByVendor,
+  readOnly = false,
 }: {
   eventId: string;
   eventVendors: EventVendorRow[];
   taskCountByVendor: Record<string, number>;
+  readOnly?: boolean;
 }) {
   const [addOpen, setAddOpen] = useState(false);
 
@@ -90,10 +93,10 @@ export function VendorBoard({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-muted-foreground">분야별 담당 업체</h2>
-        <Button onClick={() => setAddOpen(true)}>
+        {!readOnly && <Button onClick={() => setAddOpen(true)}>
           <Plus className="size-4" />
           업체 추가
-        </Button>
+        </Button>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -115,14 +118,16 @@ export function VendorBoard({
                         <StatusBadge status="wait" className="mt-1">
                           배정된 항목 {taskCountByVendor[ev.id] ?? 0}건
                         </StatusBadge>
+                        <p className="mt-1 text-xs text-muted-foreground">{ev.settled_at ? "정산 완료 · 업체 접근 종료" : "업체 접근 허용 중"}</p>
+                        {!readOnly && <form action={setVendorSettlement} className="mt-2 space-y-2"><input type="hidden" name="id" value={ev.id}/><input type="hidden" name="settled" value={ev.settled_at ? "false" : "true"}/><Input name="note" aria-label="정산 완료 또는 접근 재개 사유" placeholder="처리 사유 (필수)" required maxLength={2000}/><Button type="submit" variant="outline" size="sm">{ev.settled_at ? "업체 접근 재개" : "정산 완료 · 접근 종료"}</Button></form>}
                       </div>
-                      <form action={removeEventVendor}>
+                      {!readOnly && <form action={removeEventVendor}>
                         <input type="hidden" name="id" value={ev.id} />
                         <input type="hidden" name="eventId" value={eventId} />
                         <Button type="submit" variant="ghost" size="icon-sm">
                           <X className="size-4" />
                         </Button>
-                      </form>
+                      </form>}
                     </div>
                   ))
                 )}

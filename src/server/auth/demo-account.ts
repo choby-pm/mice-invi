@@ -2,17 +2,17 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { DemoRole } from "@/lib/demo";
-import { demoId, SERVICE_TYPES } from "../../../scripts/demo-data.mjs";
+import { demoId } from "../../../scripts/demo-data.mjs";
 
 const PCO_ROLES = { pco: "PCO_ADMIN", manager: "PCO_MANAGER", field: "PCO_FIELD" } as const;
 const tenantId = demoId("tenant");
-const vendorIds = SERVICE_TYPES.map((type) => demoId(`vendor:${type}`));
+const vendorIds = [demoId("vendor:FLIGHT")];
 const delegationIds = [demoId("delegation:VN")];
 
 export async function getDemoAccount(role: DemoRole) {
   const admin = createAdminClient();
   let query;
-  if (role === "vendor") query = admin.from("vendor_member").select("user_id").eq("vendor_id", vendorIds[0]).eq("role", "ADMIN");
+  if (role === "vendor") query = admin.from("vendor_member").select("user_id").eq("vendor_id", vendorIds[0]).eq("role", "ADMIN").eq("status", "ACTIVE");
   else if (role === "proxy") query = admin.from("delegation_proxy").select("user_id").eq("delegation_id", delegationIds[0]).eq("status", "ACTIVE");
   else query = admin.from("tenant_member").select("user_id").eq("tenant_id", tenantId).eq("role", PCO_ROLES[role]);
   const { data: member, error } = await query.single();
@@ -20,7 +20,7 @@ export async function getDemoAccount(role: DemoRole) {
   const [account, ...scopes] = await Promise.all([
     admin.auth.admin.getUserById(member.user_id),
     admin.from("tenant_member").select("tenant_id, role").eq("user_id", member.user_id),
-    admin.from("vendor_member").select("vendor_id").eq("user_id", member.user_id),
+    admin.from("vendor_member").select("vendor_id").eq("user_id", member.user_id).eq("status", "ACTIVE"),
     admin.from("delegation_proxy").select("delegation_id").eq("user_id", member.user_id).eq("status", "ACTIVE"),
   ]);
   if (account.error || !account.data.user) throw new Error("데모 계정을 확인할 수 없습니다.");
@@ -39,7 +39,7 @@ export function assertDemoAccount(
 ) {
   const validIdentity = user.email === `choby.pm+demo-${role}@gmail.com` && user.app_metadata.demo_seed === "mice-invi-v1";
   const validScope = role === "vendor"
-    ? !tenants.length && !delegations.length && vendors.length > 0 && vendors.every((v) => vendorIds.includes(v.vendor_id))
+    ? !tenants.length && !delegations.length && vendors.length === 1 && vendors[0].vendor_id === vendorIds[0]
     : role === "proxy"
       ? !tenants.length && !vendors.length && delegations.length === 1 && delegations[0].delegation_id === delegationIds[0]
       : !vendors.length && !delegations.length && tenants.length === 1 && tenants[0].tenant_id === tenantId && tenants[0].role === PCO_ROLES[role];

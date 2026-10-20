@@ -67,6 +67,54 @@ describe("고객 입력 → 업체 처리 → 고객 확정 조회 (독립 DB �
     for (const entry of users) await admin.auth.admin.deleteUser(entry.id);
   }, 30000);
 
+  it("대리인이 자기 서비스를 확정하거나 업체를 바꾸지 못함", async () => {
+    const confirmed = await proxy.from("service_item").update({ status: "CONFIRMED" }).eq("id", items.FLIGHT).select("id");
+    expect(confirmed.error).not.toBeNull();
+    const reassigned = await proxy.from("service_item").update({ event_vendor_id: null }).eq("id", items.FLIGHT).select("id");
+    expect(reassigned.error).not.toBeNull();
+    const stored = await admin.from("service_item").select("status,event_vendor_id").eq("id", items.FLIGHT).single();
+    expect(stored.data?.status).toBe("DRAFT"); expect(stored.data?.event_vendor_id).toBeTruthy();
+  });
+
+  it("업체는 같은 행사라도 미배정 대표단은 조회하지 못함", async () => {
+    const other = await admin.from("delegation").insert({ tenant_id: tenantId, event_id: eventId, name: "미배정 대표단", country: "JP", organization: "검증용 기관" }).select("id").single();
+    expect(other.error).toBeNull();
+    const result = await vendor.from("delegation").select("id").eq("id", other.data!.id);
+    expect(result.error).toBeNull(); expect(result.data).toEqual([]);
+  });
+
+  it("암호화 키 반환 RPC는 외부 접근 불가", async () => {
+    const result = await proxy.rpc("get_event_key", { p_event_id: eventId });
+    expect(result.error).not.toBeNull(); expect(result.data).toBeNull();
+  });
+
+  it("내부 메모는 같은 대표단 대리인·업체에게도 비공개", async () => {
+    const written = await pco.from("delegation_internal").upsert({ delegation_id: delegationId, note: "PCO 내부 검토 전용" });
+    expect(written.error).toBeNull();
+    expect((await proxy.from("delegation_internal").select("note").eq("delegation_id", delegationId)).data).toEqual([]);
+    expect((await vendor.from("delegation_internal").select("note").eq("delegation_id", delegationId)).data).toEqual([]);
+    expect((await pco.from("delegation_internal").select("note").eq("delegation_id", delegationId).single()).data?.note).toBe("PCO 내부 검토 전용");
+  });
+
+  it("다른 서비스 유형에 항공 정보를 넣거나 다른 대표단 인원을 연결하지 못함", async () => {
+    const result = await vendor.from("flight_segment").insert({ service_item_id: items.LODGING, direction: "INBOUND", seq: 1, flight_no: "BAD", dep_at: "2027-04-01T00:00:00Z", arr_at: "2027-04-01T01:00:00Z" });
+    expect(result.error).not.toBeNull();
+    const room = await vendor.from("room_assignment").insert({ service_item_id: items.LODGING, hotel_name: "Test", participant_ids: [crypto.randomUUID()] });
+    expect(room.error).not.toBeNull();
+  });
+
+  it("불참은 삭제 대신 취소 요청으로 전달하고 대리인은 취소 완료를 확정할 수 없음", async () => {
+    const declined = await proxy.from("delegation").update({ rsvp: "DECLINED" }).eq("id", delegationId);
+    expect(declined.error).toBeNull();
+    const item = await vendor.from("service_item").select("status").eq("id", items.FLIGHT).single();
+    expect(item.data?.status).toBe("CANCEL_REQ");
+    expect((await proxy.from("service_item").update({ status: "CANCELLED" }).eq("id", items.FLIGHT)).error).not.toBeNull();
+    expect((await vendor.from("service_item").update({ status: "CANCELLED", confirmation_note: "취소 수수료 없음" }).eq("id", items.FLIGHT)).error).toBeNull();
+    // 뒤의 고객 요청 시나리오를 위한 독립 테스트 데이터 복원입니다.
+    await admin.from("service_item").update({ status: "DRAFT", confirmation_note: null }).eq("delegation_id", delegationId);
+    await admin.from("delegation").update({ rsvp: "ATTENDING" }).eq("id", delegationId);
+  });
+
   it("고객 항공 요청의 도시·날짜·메모를 실제 업체 권한으로 조회", async () => {
     mocks.client.mockResolvedValue(proxy);
     await saveFlightRequest(form({ serviceItemId: items.FLIGHT, inboundOriginCity: "Hanoi", inboundDestAirport: "ICN", inboundPreferredDate: "2027-04-01", outboundPreferredDate: "2027-04-04", outboundOriginAirport: "ICN", outboundDestCity: "Hanoi", note: "창가 좌석 희망" }));
@@ -74,6 +122,21 @@ describe("고객 입력 → 업체 처리 → 고객 확정 조회 (독립 DB �
     expect(result.error).toBeNull(); expect(result.data?.status).toBe("REQUESTED");
     expect(result.data?.note).toContain("Hanoi"); expect(result.data?.note).toContain("창가 좌석 희망");
     expect(result.data?.flight_request).toBeTruthy();
+  });
+
+  it("변경 기록은 관련 업체에 즉시 보이고 업체 확인은 PCO가 확인", async () => {
+    const updates = await vendor.from("service_update").select("id,kind,after_text").eq("service_item_id", items.FLIGHT);
+    expect(updates.error).toBeNull(); expect(updates.data?.some((u) => u.after_text?.includes("Hanoi"))).toBe(true);
+    const id = updates.data![0].id;
+    const identity = await vendor.auth.getUser();
+    const receipt = await vendor.from("service_update_receipt").insert({ update_id: id, user_id: identity.data.user!.id });
+    expect(receipt.error).toBeNull();
+    const status = await pco.from("service_update").select("vendor_ack_at").eq("id", id).single();
+    expect(status.data?.vendor_ack_at).toBeTruthy();
+    const outsider = await user("outsider");
+    expect((await outsider.client.from("service_update").select("id").eq("id", id)).data).toEqual([]);
+    const forged = await outsider.client.from("service_update_receipt").insert({ update_id: id, user_id: outsider.id });
+    expect(forged.error).not.toBeNull();
   });
 
   it("업체 확정은 고객에게 편명·발권·예약번호로 보이고 수송이 자동 생성", async () => {
@@ -103,5 +166,36 @@ describe("고객 입력 → 업체 처리 → 고객 확정 조회 (독립 DB �
     await saveDietaryRequirements(form({ serviceItemId: items.DIETARY, entries: JSON.stringify([{ participantId, dietaryCode: "VEGETARIAN", note: "가상 식이 요청" }]) }));
     const lodging = await vendor.from("service_item").select("note").eq("id", items.LODGING).single(); expect(lodging.data?.note).toContain("금연 객실");
     const dietary = await vendor.from("dietary_requirement").select("dietary_code").eq("service_item_id", items.DIETARY); expect(dietary.data?.[0].dietary_code).toBe("VEGETARIAN");
+  });
+  it("동의서 소속·버전을 검증하고 체크 해제는 철회로 저장", async () => {
+    const policy = await admin.from("consent_policy").insert({ tenant_id: tenantId, event_id: eventId, version: 1, is_current: true }).select("id").single();
+    if (policy.error) throw policy.error;
+    const item = await admin.from("consent_item").insert({ tenant_id: tenantId, event_id: eventId, policy_id: policy.data.id, category: "OPTIONAL", required: false, text: { ko: "검증용 선택 동의" } }).select("id").single();
+    if (item.error) throw item.error;
+    const args = { p_participant_id: participantId, p_delegation_id: delegationId, p_policy_version: 1, p_item_ids: [item.data.id] };
+    expect((await proxy.rpc("submit_participant_consent", args)).error).toBeNull();
+    expect((await proxy.rpc("submit_participant_consent", { ...args, p_policy_version: 99 })).error).not.toBeNull();
+    expect((await vendor.rpc("submit_participant_consent", args)).error).not.toBeNull();
+    expect((await proxy.rpc("submit_participant_consent", { ...args, p_item_ids: [] })).error).toBeNull();
+    const saved = await proxy.from("consent_record").select("agreed,status").eq("participant_id", participantId).single();
+    expect(saved.data).toMatchObject({ agreed: false, status: "WITHDRAWN" });
+  });
+
+  it("미완료 건이 있으면 정산을 막고 정산 후 업체 조회를 종료하며 재개 가능", async () => {
+    const assignment = await admin.from("event_vendor").select("id").eq("event_id", eventId).eq("vendor_id", vendorId).single();
+    if (assignment.error) throw assignment.error;
+    const args = { p_event_vendor_id: assignment.data.id, p_settled: true, p_note: "검증용 정산 완료" };
+    expect((await vendor.rpc("set_vendor_settlement", args)).error).not.toBeNull();
+    expect((await pco.rpc("set_vendor_settlement", args)).error).not.toBeNull();
+    await admin.from("service_item").update({ status: "CONFIRMED" }).eq("event_id", eventId);
+    expect((await pco.rpc("set_vendor_settlement", args)).error).toBeNull();
+    expect((await vendor.from("service_item").select("id").eq("event_id", eventId)).data).toEqual([]);
+    expect((await vendor.from("service_update").select("id")).data).toEqual([]);
+    expect((await vendor.from("delegation").select("id").eq("id", delegationId)).data).toEqual([]);
+    expect((await pco.rpc("set_vendor_settlement", { ...args, p_settled: false, p_note: "검증용 접근 재개" })).error).toBeNull();
+    expect((await vendor.from("service_item").select("id").eq("event_id", eventId)).data?.length).toBeGreaterThan(0);
+    await admin.from("vendor_member").update({ status: "REMOVED" }).eq("vendor_id", vendorId);
+    expect((await vendor.from("service_item").select("id").eq("event_id", eventId)).data).toEqual([]);
+    expect((await vendor.from("delegation").select("id").eq("id", delegationId)).data).toEqual([]);
   });
 });

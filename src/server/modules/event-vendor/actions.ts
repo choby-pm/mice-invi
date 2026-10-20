@@ -8,6 +8,13 @@ import { getSiteUrl } from "@/lib/site-url";
 import { assignDefaultServiceVendors } from "@/server/modules/service-item/assign-default-vendors";
 import { revalidateLinkedViews } from "@/server/revalidate-linked-views";
 
+export async function setVendorSettlement(form: FormData) {
+  const client = await createServerSupabaseClient();
+  const result = await client.rpc("set_vendor_settlement", { p_event_vendor_id: String(form.get("id") ?? ""), p_settled: form.get("settled") === "true", p_note: String(form.get("note") ?? "").trim() });
+  if (result.error) throw new Error("정산 상태를 변경하지 못했습니다. 미완료 서비스·조정 요청과 처리 사유를 확인해 주세요.");
+  revalidateLinkedViews();
+}
+
 export async function addEventVendor(formData: FormData) {
   const eventId = formData.get("eventId") as string;
   const vendorName = (formData.get("vendorName") as string)?.trim();

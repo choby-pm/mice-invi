@@ -49,6 +49,12 @@ describe("데모 계정 범위", () => {
     expect(() => assertDemoAccount("proxy", identity("proxy"), [], [], [{ delegation_id: demoId("real-delegation") }])).toThrow();
   });
 
+  it("항공 데모 계정의 다른 분야 단독·복수 소속은 거부", () => {
+    const flight = { vendor_id: demoId("vendor:FLIGHT") }, lodging = { vendor_id: demoId("vendor:LODGING") };
+    expect(() => assertDemoAccount("vendor", identity("vendor"), [], [lodging], [])).toThrow();
+    expect(() => assertDemoAccount("vendor", identity("vendor"), [], [flight, lodging], [])).toThrow();
+  });
+
   it("이메일만 맞는 일반 계정이나 다른 조직에도 연결된 계정은 거부", () => {
     const member = [{ tenant_id: demoId("tenant"), role: "PCO_ADMIN" }];
     expect(() => assertDemoAccount("pco", { ...identity("pco"), app_metadata: {} }, member, [], [])).toThrow();

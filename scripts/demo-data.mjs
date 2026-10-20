@@ -34,7 +34,7 @@ export function buildDemoData(users, serviceIds = {}) {
   for (const [i, type] of SERVICE_TYPES.entries()) {
     vendors[type] = add("vendor", type, { name: `[DEMO] ${["하늘여행", "서울컨벤션호텔", "의전모빌리티", "공항컨시어지", "그린케이터링"][i]}` });
     eventVendors[type] = add("event_vendor", type, { ...base, vendor_id: vendors[type], service_types: [type] });
-    add("vendor_member", type, { vendor_id: vendors[type], user_id: users.vendor, role: "ADMIN" });
+    if (type === "FLIGHT") add("vendor_member", type, { vendor_id: vendors[type], user_id: users.vendor, role: "ADMIN", status: "ACTIVE" });
     for (const participant_type of ["VIP", "COMPANION", "STAFF"]) {
       add("support_policy", `${type}:${participant_type}`, { ...base, service_type: type, participant_type,
         support_type: participant_type === "STAFF" && type === "FLIGHT" ? "SELF_BOOKED" : "SUPPORTED",
@@ -53,7 +53,7 @@ export function buildDemoData(users, serviceIds = {}) {
     const delegation_id = add("delegation", country, { ...base, name: `${name} 대표단 [DEMO]`, country,
       organization: `${name} 데모 국제협력원`, invite_status, rsvp, owner_user_id: users.pco,
       protocol_level_id: levels[index % levels.length], preferred_language: index % 2 ? "en" : "ko",
-      completeness: [100, 80, 40, 10, 0, 0][index], internal_note: "가상 인물·기관으로 구성한 데모 데이터입니다." });
+      completeness: [100, 80, 40, 10, 0, 0][index] });
     if (country === "VN") add("delegation_proxy", country, { tenant_id, delegation_id, user_id: users.proxy, status: "ACTIVE" });
     const participants = ["VIP", "COMPANION", "STAFF"].map((participant_type, i) =>
       add("participant", `${country}:${i}`, { tenant_id, delegation_id, participant_type,

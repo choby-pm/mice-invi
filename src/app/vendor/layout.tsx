@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { vendorLogout } from "@/server/modules/iam/vendor-auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { Plane } from "lucide-react";
+import { LiveRefresh } from "@/components/shared/live-refresh";
 
 const NAV = [
   { href: "/vendor", label: "통합 할 일" },
@@ -16,6 +17,7 @@ export default async function VendorLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <LiveRefresh />
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-6">

@@ -69,7 +69,7 @@ function CompleteForm({ itemId, revalidateTo, onDone }: { itemId: string; revali
       <input type="hidden" name="revalidateTo" value={revalidateTo} />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`note-${itemId}`}>처리 결과 메모</Label>
-        <Input id={`note-${itemId}`} name="resolutionNote" placeholder="예: KE003으로 재배차 완료" />
+        <Input id={`note-${itemId}`} name="resolutionNote" placeholder="예: KE003으로 재배차 완료" required />
       </div>
       <div className="flex items-center gap-2">
         <Checkbox id={`changed-${itemId}`} name="valueChanged" defaultChecked />

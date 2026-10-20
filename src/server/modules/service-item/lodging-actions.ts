@@ -115,10 +115,11 @@ export async function saveRoomAssignments(formData: FormData) {
     ? `${first.hotelName}${first.roomType ? ` · ${first.roomType}` : ""}${rooms.length > 1 ? ` 외 ${rooms.length - 1}개 객실` : ""}`
     : null;
 
-  await supabase
+  const confirmed = await supabase
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (confirmed.error || !confirmed.data) throw new Error("숙박 확정을 저장하지 못했습니다.");
 
   revalidateLinkedViews();
 }

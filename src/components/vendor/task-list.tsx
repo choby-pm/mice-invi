@@ -25,7 +25,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { startServiceItem, confirmServiceItem } from "@/server/modules/service-item/vendor-actions";
+import { startServiceItem, confirmServiceItem, confirmServiceCancellation } from "@/server/modules/service-item/vendor-actions";
 import { saveFlightSegments } from "@/server/modules/service-item/flight-actions";
 import { saveRoomAssignments } from "@/server/modules/service-item/lodging-actions";
 import { saveVehicleDispatches } from "@/server/modules/service-item/transfer-actions";
@@ -834,7 +834,7 @@ function ConfirmDialog({ item, open, onOpenChange }: { item: VendorTaskRow; open
 function TaskRow({ item, readOnly }: { item: VendorTaskRow; readOnly: boolean }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   return (
-    <article className="rounded-xl border bg-background shadow-sm">
+    <article id={`service-${item.id}`} className="scroll-mt-6 rounded-xl border bg-background shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
         <div className="min-w-0"><p className="mb-1 text-xs text-muted-foreground">{item.delegation?.event?.name}</p><h3 className="text-base font-semibold">{item.delegation?.name}</h3></div>
         <div className="flex items-center gap-2"><span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">{SERVICE_TYPE_LABEL[item.service_type]}</span><StatusBadge status={SERVICE_STATUS_BADGE[item.status]}>{SERVICE_STATUS_LABEL[item.status]}</StatusBadge></div>
@@ -844,6 +844,7 @@ function TaskRow({ item, readOnly }: { item: VendorTaskRow; readOnly: boolean })
         <div className="space-y-2 text-sm"><p className="flex items-start gap-2"><CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" />{item.scheduled_at ? formatDateTime(item.scheduled_at, "ko") : "희망 일정 미입력"}</p><p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" />참가자 {item.delegation?.participant?.length ?? 0}명</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <ServiceDetailDialog item={item} />
+          {!readOnly && item.status === "CANCEL_REQ" && <form action={confirmServiceCancellation} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={item.id}/><Input name="confirmationNote" aria-label="취소 결과와 비용" placeholder="취소 결과·수수료 (필수)" required maxLength={2000}/><Button type="submit" size="sm" variant="destructive">취소 반영 완료</Button></form>}
           {!readOnly && item.status === "REQUESTED" && (
           <form action={startServiceItem}>
             <input type="hidden" name="id" value={item.id} />

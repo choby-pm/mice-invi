@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { logOutPco } from "@/server/modules/iam/auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { StatusBadge, type StatusBadgeStatus } from "@/components/shared/status-badge";
+import { LiveRefresh } from "@/components/shared/live-refresh";
+import { getCurrentMembership } from "@/server/modules/org/get-membership";
 
 const STATUS_LABEL: Record<string, string> = { PREPARING: "준비 중", ACTIVE: "진행 중", CLOSED: "종료" };
 const STATUS_BADGE: Record<string, StatusBadgeStatus> = { PREPARING: "wait", ACTIVE: "progress", CLOSED: "done" };
@@ -31,9 +33,11 @@ export default async function EventLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const membership = await getCurrentMembership();
+  if (!membership) notFound();
   const supabase = await createServerSupabaseClient();
   const [{ data: event }, { data: auth }, { count: openIssueCount }] = await Promise.all([
-    supabase.from("event").select("id, name, status").eq("id", id).single(),
+    supabase.from("event").select("id, name, status").eq("id", id).eq("tenant_id", membership.tenantId).single(),
     supabase.auth.getClaims(),
     supabase.from("change_issue").select("id", { count: "exact", head: true }).eq("event_id", id).in("status", ["OPEN", "IN_PROGRESS"]),
   ]);
@@ -41,6 +45,7 @@ export default async function EventLayout({
 
   // 이 행사 안에서만 의미 있는 메뉴 (행사를 나가면 사이드바가 (dashboard) 것으로 되돌아갑니다)
   const nav = [
+    { href: `/console/events/${id}`, label: "운영 현황", icon: ClipboardList },
     { href: `/console/events/${id}/delegations`, label: "대표단", icon: Users },
     { href: `/console/events/${id}/programs`, label: "하위 행사", icon: CalendarDays },
     { href: `/console/events/${id}/consent`, label: "동의서", icon: FileCheck2 },
@@ -53,6 +58,7 @@ export default async function EventLayout({
 
   return (
     <SidebarProvider>
+      <LiveRefresh />
       <Sidebar collapsible="icon">
         <SidebarHeader className="px-3 py-3">
           <Link

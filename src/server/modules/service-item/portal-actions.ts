@@ -23,14 +23,15 @@ export async function submitServiceRequest(formData: FormData) {
   if (!item) return;
   if (["TRANSFER", "AIRPORT"].includes(item.service_type)) throw new Error("이 서비스는 담당자가 요청을 관리합니다.");
 
-  await supabase
+  const result = await supabase
     .from("service_item")
     .update({
       note,
       scheduled_at: scheduledAt,
       status: requestStatus(item.status, item.note !== note || item.scheduled_at !== scheduledAt),
     })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("요청을 저장하지 못했습니다. 담당 범위와 현재 상태를 확인해 주세요.");
 
   revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);

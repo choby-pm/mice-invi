@@ -9,6 +9,8 @@ import { ProgramList } from "@/components/portal/program-list";
 import { getConsentChecklist } from "@/server/modules/consent/portal-actions";
 import { BlankScreen } from "@/components/shared/blank-screen";
 import { SERVICE_DETAILS_SELECT } from "@/lib/service-detail-query";
+import { getMessages } from "@/i18n/get-messages";
+import { ServiceUpdates } from "@/components/shared/service-updates";
 
 export default async function PortalDelegationPage({
   params,
@@ -16,6 +18,7 @@ export default async function PortalDelegationPage({
   params: Promise<{ delegationId: string }>;
 }) {
   const { delegationId } = await params;
+  const { locale } = await getMessages();
   const supabase = await createServerSupabaseClient();
   const { data: delegation } = await supabase
     .from("delegation")
@@ -54,6 +57,7 @@ export default async function PortalDelegationPage({
       </div>
 
       <RsvpBanner delegationId={delegationId} rsvp={delegation.rsvp} revalidateTo={revalidateTo} />
+      <ServiceUpdates audience="portal" delegationId={delegationId} locale={locale} />
 
       {!declined && (
         <>

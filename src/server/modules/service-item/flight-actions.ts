@@ -156,16 +156,17 @@ export async function saveFlightSegments(formData: FormData) {
     .filter(Boolean)
     .join(" / ") || null;
 
-  await supabase
+  const confirmed = await supabase
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (confirmed.error || !confirmed.data) throw new Error("항공 예약 확정을 저장하지 못했습니다.");
 
   // 입국 최종 도착 구간·귀국 첫 출발 구간이 확정되면 수송 요청을 자동 생성/갱신합니다(P08).
   // 대리인은 수송을 요청하지 않으므로 여기서만 만들어집니다 — 04 §"IR-02" 재확정 시 갱신도 이 함수가 처리.
   if (finalArrival) {
     const segId = insertedRows.find((r) => r.direction === "INBOUND" && r.seq === byDirection.INBOUND.length)?.id ?? null;
-    await supabase.rpc("generate_transfer_request", {
+    const generated = await supabase.rpc("generate_transfer_request", {
       p_flight_service_item_id: serviceItemId,
       p_direction: "INBOUND",
       p_from_text: finalArrival.arrAirport || "공항",
@@ -173,10 +174,11 @@ export async function saveFlightSegments(formData: FormData) {
       p_scheduled_at: fromFormDateTime(finalArrival.arrAt),
       p_source_flight_segment_id: segId,
     });
+    if (generated.error) throw new Error("항공편은 저장됐지만 입국 수송 연동에 실패했습니다. 담당자에게 확인해 주세요.");
   }
   if (firstDeparture) {
     const segId = insertedRows.find((r) => r.direction === "OUTBOUND" && r.seq === 1)?.id ?? null;
-    await supabase.rpc("generate_transfer_request", {
+    const generated = await supabase.rpc("generate_transfer_request", {
       p_flight_service_item_id: serviceItemId,
       p_direction: "OUTBOUND",
       p_from_text: "숙소",
@@ -184,11 +186,12 @@ export async function saveFlightSegments(formData: FormData) {
       p_scheduled_at: fromFormDateTime(firstDeparture.depAt),
       p_source_flight_segment_id: segId,
     });
+    if (generated.error) throw new Error("항공편은 저장됐지만 귀국 수송 연동에 실패했습니다. 담당자에게 확인해 주세요.");
   }
 
   // 재확정으로 값이 크게 바뀌었으면 R4 영향 엔진이 이미 처리중인 수송·숙박·공항 의전에
   // 조정 항목을 만듭니다(03 §1.5). 첫 확정이거나 사소한 변경이면 함수 안에서 알아서 아무것도 안 만듭니다.
-  await supabase.rpc("evaluate_flight_change_impact", {
+  const impact = await supabase.rpc("evaluate_flight_change_impact", {
     p_flight_service_item_id: serviceItemId,
     p_old_inbound_arr_at: oldFinalArrival?.arr_at ?? null,
     p_old_inbound_arr_airport: oldFinalArrival?.arr_airport ?? null,
@@ -199,6 +202,7 @@ export async function saveFlightSegments(formData: FormData) {
     p_new_outbound_dep_at: firstDeparture ? fromFormDateTime(firstDeparture.depAt) : null,
     p_new_outbound_dep_airport: firstDeparture?.depAirport ?? null,
   });
+  if (impact.error) throw new Error("항공편은 저장됐지만 관련 업무 조정 요청 생성에 실패했습니다. 담당자에게 확인해 주세요.");
 
   revalidateLinkedViews();
 }

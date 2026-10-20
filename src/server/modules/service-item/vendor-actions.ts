@@ -11,7 +11,8 @@ export async function startServiceItem(formData: FormData) {
   if (!id) return;
 
   const supabase = await createServerSupabaseClient();
-  await supabase.from("service_item").update({ status: "IN_PROGRESS" }).eq("id", id).eq("status", "REQUESTED");
+  const result = await supabase.from("service_item").update({ status: "IN_PROGRESS" }).eq("id", id).eq("status", "REQUESTED").select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("업무를 시작하지 못했습니다. 담당 권한과 현재 상태를 확인해 주세요.");
   revalidateLinkedViews();
 }
 
@@ -21,9 +22,20 @@ export async function confirmServiceItem(formData: FormData) {
   if (!id) return;
 
   const supabase = await createServerSupabaseClient();
-  await supabase
+  const result = await supabase
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id).in("status", ["REQUESTED", "IN_PROGRESS", "CHANGING", "CONFIRMED", "NOTIFIED"]).select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("확정 정보를 저장하지 못했습니다. 담당 권한과 현재 상태를 확인해 주세요.");
+  revalidateLinkedViews();
+}
+
+export async function confirmServiceCancellation(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const note = String(formData.get("confirmationNote") ?? "").trim();
+  if (!id || !note || note.length > 2000) throw new Error("취소 결과와 발생 비용을 입력해 주세요.");
+  const client = await createServerSupabaseClient();
+  const result = await client.from("service_item").update({ status: "CANCELLED", confirmation_note: note, confirmed_at: new Date().toISOString() }).eq("id", id).eq("status", "CANCEL_REQ").select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("취소를 완료하지 못했습니다. 담당 권한과 현재 상태를 확인해 주세요.");
   revalidateLinkedViews();
 }

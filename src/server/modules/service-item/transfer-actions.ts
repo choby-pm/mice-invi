@@ -53,10 +53,11 @@ export async function saveVehicleDispatches(formData: FormData) {
     ? `${first.vehicleClass ?? "차량"} ${first.departAt ? new Date(first.departAt).toLocaleString("ko-KR") : ""}${vehicles.length > 1 ? ` 외 ${vehicles.length - 1}대` : ""}`
     : null;
 
-  await supabase
+  const confirmed = await supabase
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (confirmed.error || !confirmed.data) throw new Error("배차 확정을 저장하지 못했습니다.");
 
   revalidateLinkedViews();
 }

@@ -38,10 +38,11 @@ export async function saveAirportRequest(formData: FormData) {
 
   const summary = scope.map((s) => SCOPE_LABEL[s]).filter(Boolean).join(" · ") || null;
 
-  await supabase
+  const confirmed = await supabase
     .from("service_item")
     .update({ note: [summary, note].filter(Boolean).join(" · ") || null, status })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (confirmed.error || !confirmed.data) throw new Error("공항 의전 요청을 저장하지 못했습니다.");
 
   revalidateLinkedViews();
   if (revalidateTo) revalidatePath(revalidateTo);
@@ -75,10 +76,11 @@ export async function saveAirportAssignment(formData: FormData) {
     .filter(Boolean)
     .join(" · ") || null;
 
-  await supabase
+  const result = await supabase
     .from("service_item")
     .update({ status: "CONFIRMED", confirmation_note: confirmationNote, confirmed_at: new Date().toISOString() })
-    .eq("id", serviceItemId);
+    .eq("id", serviceItemId).select("id").maybeSingle();
+  if (result.error || !result.data) throw new Error("공항 의전 확정을 저장하지 못했습니다.");
 
   revalidateLinkedViews();
 }

@@ -17,6 +17,7 @@ it("VIP는 자기 대표단 필터와 영어 안내를 사용", async () => {
   const html = renderToStaticMarkup(await ServiceUpdates({ audience: "portal", delegationId: "own", locale: "en" }));
   expect(mocks.eq).toHaveBeenCalledWith("service_item.delegation_id", "own");
   expect(html).toContain("Acknowledge update"); expect(html).not.toContain("업체 확인 기한 초과");
+  expect(html).toContain("/portal/delegation/own#flight");
 });
 it("DB 오류를 빈 변경함으로 숨기지 않음", async () => {
   mocks.limit.mockResolvedValue({ data: null, error: { message: "offline" } });

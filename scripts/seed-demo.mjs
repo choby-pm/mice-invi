@@ -1,12 +1,12 @@
 import { config } from "dotenv";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { buildDemoData, demoId } from "./demo-data.mjs";
+import { buildDemoData, demoId, DEMO_USER_ROLES } from "./demo-data.mjs";
 
 config({ path: ".env.local", quiet: true });
 const args = process.argv.slice(2);
 if (args.some((arg) => arg !== "--apply")) throw new Error("사용법: npm run seed:demo -- [--apply]");
-const emails = Object.fromEntries(["pco", "manager", "field", "vendor", "proxy"].map((role) =>
+const emails = Object.fromEntries(DEMO_USER_ROLES.map((role) =>
   [role, `choby.pm+demo-${role}@gmail.com`]));
 const preview = buildDemoData(Object.fromEntries(Object.keys(emails).map((role) => [role, demoId(`user:${role}`)])));
 console.table(Object.entries(preview).map(([table, rows]) => ({ table, rows: rows.length })));
@@ -71,6 +71,7 @@ for (const delegation of tables.delegation) {
   }
 }
 tables = buildDemoData(users, serviceIds);
+const seedStartedAt = new Date().toISOString();
 for (const row of tables.service_item) {
   const existing = defaults.find((item) => item.id === row.id);
   if (!existing) await insertMissing("service_item", [row]);
@@ -83,6 +84,13 @@ for (const table of ["flight_request", "flight_segment", "lodging_request", "roo
   "dietary_requirement", "vehicle_dispatch", "consent_policy", "consent_item", "consent_record", "program", "program_attendance",
   "transfer_request", "change_issue", "adjustment_item"]) {
   await insertMissing(table, tables[table]);
+}
+
+// 자동 생성 서비스를 데모 단계로 바꿀 때 트리거가 남긴 "최근 변경" 알림은 실제 변경이 아니므로 지웁니다.
+const seededServiceIds = tables.service_item.map((row) => row.id);
+for (let i = 0; i < seededServiceIds.length; i += 100) {
+  const { error } = await admin.from("service_update").delete().gte("created_at", seedStartedAt).in("service_item_id", seededServiceIds.slice(i, i + 100));
+  if (error) throw new Error(`service_update: ${error.message}`);
 }
 
 // Authenticate without sending email; sensitive demo values use the same encryption RPC as the app.

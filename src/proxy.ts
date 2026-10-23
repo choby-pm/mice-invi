@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { DEMO_TAB_COOKIE, demoTabRole } from "@/lib/demo";
 
 // R0 임시 로그인 흔적 (D-SY-10 이전). admin만 아직 mock_role 쿠키로 화면 접근을
 // 흉내 냅니다 — 운영사 내부 도구라 우선순위가 낮아 가장 마지막에 실제 인증으로 바꿉니다.
@@ -43,6 +44,11 @@ function checkRealSession(request: NextRequest, loginPath: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 데모: 세션은 서버가 탭의 역할별로 보관합니다 (server/auth/demo-session.ts).
+  if (!pathname.startsWith("/admin") && demoTabRole(request.cookies.get(DEMO_TAB_COOKIE)?.value)) {
+    return NextResponse.next();
+  }
 
   // PCO 콘솔·대리인 포털·업체 포털: 실제 Supabase 세션 확인 (D-SY-10)
   if (pathname.startsWith("/console")) {

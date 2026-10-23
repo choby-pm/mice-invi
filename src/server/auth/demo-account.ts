@@ -1,20 +1,20 @@
 import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { DemoRole } from "@/lib/demo";
+import { demoVendorType, type DemoRole } from "@/lib/demo";
 import { demoId } from "../../../scripts/demo-data.mjs";
 
 const PCO_ROLES = { pco: "PCO_ADMIN", manager: "PCO_MANAGER", field: "PCO_FIELD" } as const;
 const tenantId = demoId("tenant");
-const vendorIds = [demoId("vendor:FLIGHT")];
 const delegationIds = [demoId("delegation:VN")];
 
 export async function getDemoAccount(role: DemoRole) {
   const admin = createAdminClient();
+  const vendorType = demoVendorType(role);
   let query;
-  if (role === "vendor") query = admin.from("vendor_member").select("user_id").eq("vendor_id", vendorIds[0]).eq("role", "ADMIN").eq("status", "ACTIVE");
+  if (vendorType) query = admin.from("vendor_member").select("user_id").eq("vendor_id", demoId(`vendor:${vendorType}`)).eq("role", "ADMIN").eq("status", "ACTIVE");
   else if (role === "proxy") query = admin.from("delegation_proxy").select("user_id").eq("delegation_id", delegationIds[0]).eq("status", "ACTIVE");
-  else query = admin.from("tenant_member").select("user_id").eq("tenant_id", tenantId).eq("role", PCO_ROLES[role]);
+  else query = admin.from("tenant_member").select("user_id").eq("tenant_id", tenantId).eq("role", PCO_ROLES[role as keyof typeof PCO_ROLES]);
   const { data: member, error } = await query.single();
   if (error || !member) throw new Error("데모 계정이 준비되지 않았습니다. 데모 데이터 생성을 먼저 완료해 주세요.");
   const [account, ...scopes] = await Promise.all([
@@ -38,10 +38,11 @@ export function assertDemoAccount(
   delegations: { delegation_id: string }[],
 ) {
   const validIdentity = user.email === `choby.pm+demo-${role}@gmail.com` && user.app_metadata.demo_seed === "mice-invi-v1";
-  const validScope = role === "vendor"
-    ? !tenants.length && !delegations.length && vendors.length === 1 && vendors[0].vendor_id === vendorIds[0]
+  const vendorType = demoVendorType(role);
+  const validScope = vendorType
+    ? !tenants.length && !delegations.length && vendors.length === 1 && vendors[0].vendor_id === demoId(`vendor:${vendorType}`)
     : role === "proxy"
       ? !tenants.length && !vendors.length && delegations.length === 1 && delegations[0].delegation_id === delegationIds[0]
-      : !vendors.length && !delegations.length && tenants.length === 1 && tenants[0].tenant_id === tenantId && tenants[0].role === PCO_ROLES[role];
+      : !vendors.length && !delegations.length && tenants.length === 1 && tenants[0].tenant_id === tenantId && tenants[0].role === PCO_ROLES[role as keyof typeof PCO_ROLES];
   if (!validIdentity || !validScope) throw new Error("데모 전용 계정만 사용할 수 있습니다.");
 }

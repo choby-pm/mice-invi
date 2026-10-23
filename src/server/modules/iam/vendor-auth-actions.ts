@@ -21,6 +21,8 @@ export async function logInVendor(formData: FormData) {
 }
 
 export async function vendorLogout() {
+  // 데모 세션은 모든 체험자가 공유하므로 끊지 않고 데모 첫 화면으로만 돌아갑니다.
+  if (isDemoMode()) redirect("/login");
   const supabase = await createServerSupabaseClient();
   await supabase.auth.signOut();
   redirect("/vendor-login");

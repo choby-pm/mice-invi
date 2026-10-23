@@ -5,7 +5,7 @@ import { SERVICE_DETAILS_SELECT } from "@/lib/service-detail-query";
 import { ServiceUpdates } from "@/components/shared/service-updates";
 
 export default async function VendorHomePage() {
-  const { supabase, assignments, memberships, flightDemo } = await getVendorContext();
+  const { supabase, assignments, memberships, demoLabel } = await getVendorContext();
   const assignmentIds = assignments.map((a) => a.id);
   if (!assignmentIds.length) return <p>아직 배정된 행사가 없습니다.</p>;
   const [serviceResult, adjustmentResult] = await Promise.all([
@@ -29,7 +29,7 @@ export default async function VendorHomePage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2"><p className="text-xs font-semibold uppercase tracking-widest text-primary">PARTNER WORKSPACE</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{flightDemo ? "항공 업무" : "통합 할 일"}</h1><p className="text-sm leading-6 text-muted-foreground">고객 요청부터 예약·확정까지, 대표단별 업무를 한눈에 확인하세요. 상세 보기에서 입력된 전체 내용을 확인할 수 있습니다.</p></div>
+      <div className="space-y-2"><p className="text-xs font-semibold uppercase tracking-widest text-primary">{memberships.map((m) => m.vendor.name).join(" · ") || "PARTNER WORKSPACE"}</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{demoLabel ? `${demoLabel} 업무` : "통합 할 일"}</h1><p className="text-sm leading-6 text-muted-foreground">고객 요청부터 예약·확정까지, 대표단별 업무를 한눈에 확인하세요. 상세 보기에서 입력된 전체 내용을 확인할 수 있습니다.</p></div>
       <AdjustmentList items={(adjustmentResult.data ?? []) as never} />
       <TaskList items={(serviceResult.data ?? []) as never} />
       <ServiceUpdates audience="vendor" />

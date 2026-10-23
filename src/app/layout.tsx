@@ -7,7 +7,7 @@ import "./globals.css";
 const pretendard = localFont({ src: "./fonts/PretendardVariable.woff2", variable: "--font-pretendard", weight: "100 900", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "초청자 관리 솔루션",
+  title: { default: "초청자 관리 솔루션", template: "%s · 초청자 관리 솔루션" },
   description: "MICE 행사 해외 VIP 초청자 관리 솔루션",
 };
 

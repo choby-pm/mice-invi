@@ -13,7 +13,7 @@ const PROCESSED = ["CONFIRMED", "NOTIFIED", "CANCELLED", "NOT_APPLICABLE"];
 
 export default async function VendorHistoryPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status } = await searchParams;
-  const { supabase, memberships, assignments, flightDemo } = await getVendorContext();
+  const { supabase, memberships, assignments, demoLabel } = await getVendorContext();
   const results = assignments.length ? await Promise.all([
     supabase.from("service_item").select(SERVICE_DETAILS_SELECT)
       .in("event_vendor_id", assignments.map((a) => a.id)).in("status", PROCESSED.includes(status ?? "") ? [status!] : PROCESSED)
@@ -27,7 +27,7 @@ export default async function VendorHistoryPage({ searchParams }: { searchParams
   const adjustments = results[1]?.data ?? [];
 
   return <div className="space-y-4">
-    <h1 className="text-2xl font-semibold tracking-tight">{flightDemo ? "항공 처리 내역" : "처리 내역"}</h1>
+    <h1 className="text-2xl font-semibold tracking-tight">{demoLabel ? `${demoLabel} 처리 내역` : "처리 내역"}</h1>
     <p className="text-sm text-muted-foreground">확정·취소·지원 제외된 서비스와 완료된 조정 결과를 각각 최근 100건까지 표시합니다.</p>
     <form className="flex items-center gap-2">
       <label htmlFor="history-status" className="text-sm">서비스 상태</label>

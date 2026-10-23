@@ -4,10 +4,10 @@ import { SERVICE_TYPES } from "@/lib/service-item-constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function VendorAccountPage() {
-  const { user, memberships, assignments, flightDemo } = await getVendorContext();
+  const { user, memberships, assignments, demoLabel } = await getVendorContext();
   return <div className="max-w-4xl space-y-4">
     <h1 className="text-lg font-semibold">내 정보</h1>
-    <p className="text-sm text-muted-foreground">{user.email}{flightDemo && " · 항공 업체 데모"}</p>
+    <p className="text-sm text-muted-foreground">{user.email}{demoLabel && ` · ${demoLabel} 업체 데모`}</p>
     {memberships.map((m) => <Card key={m.vendor.id}>
       <CardHeader><CardTitle>{m.vendor.name}</CardTitle></CardHeader>
       <CardContent className="space-y-3">

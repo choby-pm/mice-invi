@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
+import { DemoTabRole } from "@/components/shared/demo-tab-role";
+import { isDemoMode } from "@/lib/demo";
 import { WorkspaceLink } from "@/components/shared/workspace-link";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { vendorLogout } from "@/server/modules/iam/vendor-auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
-import { Plane } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { LiveRefresh } from "@/components/shared/live-refresh";
 
 const NAV = [
@@ -18,11 +21,11 @@ export default async function VendorLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <LiveRefresh />
+      <LiveRefresh />{isDemoMode() && <DemoTabRole />}
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-6">
-          <Link href="/vendor" className="flex items-center gap-3"><span className="rounded-xl bg-primary p-2.5 text-primary-foreground"><Plane className="size-5" /></span><span><span className="block text-base font-semibold">MICE INVI</span><span className="text-xs text-muted-foreground">파트너 업무공간</span></span></Link>
+          <Link href="/vendor" className="flex items-center gap-3"><span className="rounded-xl bg-primary p-2.5 text-primary-foreground"><Briefcase className="size-5" /></span><span><span className="block text-base font-semibold">MICE INVI</span><span className="text-xs text-muted-foreground">파트너 업무공간</span></span></Link>
           <nav className="flex gap-2 rounded-lg bg-muted/60 p-1">
             {NAV.map((item) => (
               <WorkspaceLink key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-background hover:text-primary">
@@ -43,3 +46,5 @@ export default async function VendorLayout({ children }: { children: React.React
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "업체 업무공간" };

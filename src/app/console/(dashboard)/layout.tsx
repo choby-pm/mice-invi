@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { DemoTabRole } from "@/components/shared/demo-tab-role";
+import { isDemoMode } from "@/lib/demo";
 import { WorkspaceLink } from "@/components/shared/workspace-link";
 import {
   CalendarRange,
@@ -38,7 +41,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const { data } = await supabase.auth.getClaims();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider>{isDemoMode() && <DemoTabRole />}
       <Sidebar collapsible="icon">
         <SidebarHeader className="px-3 py-3">
           <span className="text-sm font-semibold group-data-[collapsible=icon]:hidden">
@@ -83,3 +86,5 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     </SidebarProvider>
   );
 }
+
+export const metadata: Metadata = { title: "PCO 콘솔" };

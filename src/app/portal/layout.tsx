@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { DemoTabRole } from "@/components/shared/demo-tab-role";
+import { isDemoMode } from "@/lib/demo";
 import { WorkspaceLink } from "@/components/shared/workspace-link";
 import { getMessages } from "@/i18n/get-messages";
 import { setLocale } from "@/server/i18n/set-locale";
@@ -17,7 +20,7 @@ export default async function PortalLayout({ children }: { children: React.React
   return (
     // 대리인 포털은 본문 16px (아이폰 자동 확대 방지, 07 §4). 모바일 우선 레이아웃.
     <div className="min-h-screen flex flex-col text-base">
-      <LiveRefresh />
+      <LiveRefresh />{isDemoMode() && <DemoTabRole />}
       <header className="flex items-center justify-between border-b px-4 py-3">
         <span className="text-base font-semibold">{messages.common.brand}</span>
         <div className="flex items-center gap-2">
@@ -60,3 +63,5 @@ export default async function PortalLayout({ children }: { children: React.React
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "대표단 포털" };

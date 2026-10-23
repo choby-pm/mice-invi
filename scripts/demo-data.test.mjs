@@ -1,16 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { buildDemoData, demoId, SERVICE_TYPES } from "./demo-data.mjs";
+import { buildDemoData, demoId, SERVICE_TYPES, DEMO_USER_ROLES, DEMO_VENDOR_USERS } from "./demo-data.mjs";
 
-const users = Object.fromEntries(["pco", "manager", "field", "vendor", "proxy"].map((role) => [role, demoId(`user:${role}`)]));
+const users = Object.fromEntries(DEMO_USER_ROLES.map((role) => [role, demoId(`user:${role}`)]));
 const data = buildDemoData(users);
 
 test("proxy demo has exactly one active country assignment", () => {
   assert.deepEqual(data.delegation_proxy.map((row) => ({ delegation_id: row.delegation_id, status: row.status })), [{ delegation_id: demoId("delegation:VN"), status: "ACTIVE" }]);
 });
-test("vendor demo belongs only to the aviation company", () => {
-  assert.deepEqual(data.vendor_member.map((row) => ({ vendor_id: row.vendor_id, status: row.status })), [{ vendor_id: demoId("vendor:FLIGHT"), status: "ACTIVE" }]);
+test("each vendor demo account belongs to exactly one company", () => {
+  assert.deepEqual(data.vendor_member.map((row) => ({ vendor_id: row.vendor_id, user_id: row.user_id, status: row.status })),
+    SERVICE_TYPES.map((type) => ({ vendor_id: demoId(`vendor:${type}`), user_id: users[DEMO_VENDOR_USERS[type]], status: "ACTIVE" })));
+  assert.equal(new Set(data.vendor_member.map((row) => row.user_id)).size, SERVICE_TYPES.length);
+  assert.equal(data.vendor_member.find((row) => row.vendor_id === demoId("vendor:FLIGHT")).id, demoId("vendor_member:FLIGHT"));
 });
 
 test("stable unique IDs, all relationships stay inside the demo tenant", () => {
@@ -28,13 +31,14 @@ test("stable unique IDs, all relationships stay inside the demo tenant", () => {
   }
 });
 
-test("each delegation has three participant types and five assigned service types", () => {
-  assert.equal(data.delegation.length, 6);
-  assert.equal(data.participant.length, 18);
+test("large event: 60 countries, 100 VIPs and companions, five assigned service types each", () => {
+  assert.equal(data.delegation.length, 60);
+  assert.equal(new Set(data.delegation.map((d) => d.country)).size, 60);
+  assert.equal(data.participant.filter((p) => p.participant_type !== "STAFF").length, 100);
   assert.deepEqual(new Set(data.tenant_member.map((row) => row.role)), new Set(["PCO_ADMIN", "PCO_MANAGER", "PCO_FIELD"]));
   for (const delegation of data.delegation) {
     const participants = data.participant.filter((p) => p.delegation_id === delegation.id);
-    assert.deepEqual(participants.map((p) => p.participant_type), ["VIP", "COMPANION", "STAFF"]);
+    assert.equal(participants.filter((p) => p.participant_type === "VIP").length, 1);
     const services = data.service_item.filter((s) => s.delegation_id === delegation.id);
     assert.deepEqual(new Set(services.map((s) => s.service_type)), new Set(SERVICE_TYPES));
     assert.ok(services.every((s) => data.event_vendor.some((v) => v.id === s.event_vendor_id && v.service_types.includes(s.service_type))));
@@ -47,6 +51,18 @@ test("trigger-created service IDs propagate to requests, confirmations and issue
   assert.equal(rows.flight_request[0].service_item_id, mapped);
   assert.equal(rows.flight_segment[0].service_item_id, mapped);
   assert.equal(rows.change_issue[0].origin_service_id, mapped);
+});
+
+test("every stage of the service flow appears and details follow service status", () => {
+  for (const status of ["DRAFT", "REQUESTED", "IN_PROGRESS", "CONFIRMED", "NOTIFIED", "CHANGING", "CANCEL_REQ", "NOT_APPLICABLE"])
+    assert.ok(data.service_item.some((s) => s.status === status), status);
+  for (const invite of ["READY", "SENT", "BOUNCED", "OPENED", "IN_PROGRESS", "SUBMITTED", "CONFIRMED", "DECLINED"])
+    assert.ok(data.delegation.some((d) => d.invite_status === invite), invite);
+  const statusOf = (id) => data.service_item.find((s) => s.id === id).status;
+  for (const table of ["flight_request", "lodging_request", "transfer_request", "airport_request", "dietary_requirement"])
+    assert.ok(data[table].every((row) => !["DRAFT", "NOT_APPLICABLE"].includes(statusOf(row.service_item_id))), table);
+  assert.ok(data.change_issue.length >= 13);
+  assert.equal(new Set(data.change_issue.map((i) => i.issue_no)).size, data.change_issue.length);
 });
 
 test("demo covers request, fulfillment, consent, schedules and actionable issues", () => {
@@ -62,8 +78,9 @@ test("demo covers request, fulfillment, consent, schedules and actionable issues
   assert.ok(data.transfer_request.some((t) => t.source_program_id === self.id));
   for (const issue of data.change_issue) {
     const adjustments = data.adjustment_item.filter((a) => a.issue_id === issue.id);
-    assert.equal(adjustments.length, 3);
-    assert.ok(adjustments.every((a) => (issue.status === "CLOSED") === (a.status === "DONE")));
+    assert.ok(adjustments.length >= 1);
+    assert.equal(issue.status === "CLOSED", adjustments.every((a) => a.status === "DONE"));
+    assert.ok(adjustments.every((a) => data.service_item.find((s) => s.id === a.service_item_id).delegation_id === issue.delegation_id));
   }
 });
 

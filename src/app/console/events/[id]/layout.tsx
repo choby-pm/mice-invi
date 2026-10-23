@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { DemoTabRole } from "@/components/shared/demo-tab-role";
+import { isDemoMode } from "@/lib/demo";
 import { WorkspaceLink } from "@/components/shared/workspace-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -59,7 +62,7 @@ export default async function EventLayout({
 
   return (
     <SidebarProvider>
-      <LiveRefresh />
+      <LiveRefresh />{isDemoMode() && <DemoTabRole />}
       <Sidebar collapsible="icon">
         <SidebarHeader className="px-3 py-3">
           <Link
@@ -119,3 +122,5 @@ export default async function EventLayout({
     </SidebarProvider>
   );
 }
+
+export const metadata: Metadata = { title: "PCO 콘솔" };

@@ -6,7 +6,7 @@ import { demoId, SERVICE_TYPES } from "./demo-data.mjs";
 config({ path: ".env.local", quiet: true });
 const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 const counts = {};
-for (const [table, minimum] of Object.entries({ event: 3, delegation: 60, participant: 124, service_item: 301 })) {
+for (const [table, minimum] of Object.entries({ event: 3, delegation: 102, participant: 197, service_item: 511 })) {
   const result = await client.from(table).select("id", { count: "exact", head: true }).eq("tenant_id", demoId("tenant"));
   if (result.error) throw new Error(`${table}: verification failed`);
   assert(result.count >= minimum, `${table}: original demo records missing`);

@@ -61,13 +61,13 @@ for (const table of ["tenant", "tenant_member", "event", "protocol_level", "vend
 
 // Delegation INSERT triggers create four draft services with random IDs. Reuse those IDs.
 const { data: defaults, error: defaultsError } = await admin.from("service_item").select("id, delegation_id, service_type, status, note")
-  .eq("event_id", demoId("event:active"));
+  .eq("tenant_id", demoId("tenant"));
 if (defaultsError) throw defaultsError;
 const serviceIds = {};
 for (const delegation of tables.delegation) {
   for (const type of ["FLIGHT", "LODGING", "AIRPORT", "DIETARY"]) {
     const item = defaults.find((row) => row.delegation_id === delegation.id && row.service_type === type);
-    if (item) serviceIds[`${delegation.country}:${type}`] = item.id;
+    if (item) serviceIds[`${delegation.id}:${type}`] = item.id;
   }
 }
 tables = buildDemoData(users, serviceIds);

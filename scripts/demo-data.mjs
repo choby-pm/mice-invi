@@ -68,7 +68,7 @@ export function buildDemoData(users, serviceIds = {}) {
     const services = {};
     for (const type of SERVICE_TYPES) {
       services[type] = add("service_item", `${country}:${type}`, { ...base, delegation_id, service_type: type,
-        id: serviceIds[`${country}:${type}`] ?? demoId(`service_item:${country}:${type}`),
+        id: serviceIds[`${delegation_id}:${type}`] ?? demoId(`service_item:${country}:${type}`),
         event_vendor_id: eventVendors[type], support_type: serviceStatus === "NOT_APPLICABLE" ? "NOT_PROVIDED" : "SUPPORTED",
         status: serviceStatus, note: `[DEMO] ${name} ${type} 시연 항목`,
         scheduled_at: "2027-03-01T04:00:00Z", ...(index === 0 ? { confirmed_at: "2027-02-20T00:00:00Z", confirmation_note: "데모 확정 내역" } : {}) });
@@ -157,6 +157,7 @@ export function buildDemoData(users, serviceIds = {}) {
     }
   }
   addLargeEvent(add, users, serviceIds, { base, tenant_id, levels, eventVendors });
+  addOtherEvents(add, users, serviceIds, tenant_id);
   return tables;
 }
 
@@ -206,27 +207,84 @@ const ISSUES = [
 const H = 3600e3;
 const at = (ms) => new Date(ms).toISOString().replace(".000Z", "Z");
 
-function addLargeEvent(add, users, serviceIds, { base, tenant_id, levels, eventVendors }) {
+// 대표단 하나와 참가자·서비스·진행 단계에 맞는 세부 내역을 만듭니다. key는 데모 전체에서 고유한 행 이름입니다.
+function addDelegation(add, users, serviceIds, { base, tenant_id, levels, eventVendors },
+  { key, country, name, airport, i, level, types, invite_status, rsvp, completeness, participantStatus, statusOf, arrive, leave }) {
+  const delegation_id = add("delegation", key, { ...base, name: `${name} 대표단 [DEMO]`, country,
+    organization: `${name} 데모 외교부`, invite_status, rsvp, owner_user_id: i % 2 ? users.manager : users.pco,
+    protocol_level_id: levels[level], preferred_language: i % 3 ? "en" : "ko", completeness });
+  const people = types.map((participant_type, k) => ({ participant_type, id: add("participant", `${key}:${k}`, {
+    tenant_id, delegation_id, participant_type, last_name: `Demo${country}`, first_name: { VIP: "Alex", COMPANION: "Robin", STAFF: "Sam" }[participant_type],
+    display_name: `${name} ${LABEL[participant_type]} (가상)`, nationality: country,
+    title: { VIP: ["대통령 특사", "장관", "차관"][level], COMPANION: "배우자", STAFF: "의전담당" }[participant_type],
+    sort_order: k, protocol_level_id: levels[level], status: participantStatus }) }));
+  const ids = people.map((p) => p.id);
+  const guests = people.filter((p) => p.participant_type !== "STAFF").map((p) => p.id);
+  const staff = people.find((p) => p.participant_type === "STAFF");
+
+  const services = {};
+  for (const type of SERVICE_TYPES) {
+    const svc = statusOf(type);
+    services[type] = { status: svc, id: add("service_item", `${key}:${type}`, { ...base, delegation_id, service_type: type,
+      id: serviceIds[`${delegation_id}:${type}`] ?? demoId(`service_item:${key}:${type}`), event_vendor_id: eventVendors[type],
+      support_type: svc === "NOT_APPLICABLE" ? "NOT_PROVIDED" : "SUPPORTED", status: svc, note: `[DEMO] ${name} ${type} 요청`, scheduled_at: at(arrive),
+      ...(DONE.includes(svc) ? { confirmed_at: at(arrive - 18 * 24 * H + i * H), confirmation_note: "데모 확정 내역" } : {}) }) };
+  }
+  const requested = (type) => !["DRAFT", "NOT_APPLICABLE"].includes(services[type].status);
+  const done = (type) => DONE.includes(services[type].status);
+
+  if (requested("FLIGHT")) add("flight_request", key, { service_item_id: services.FLIGHT.id, inbound_origin_city: name,
+    inbound_dest_airport: "ICN", inbound_preferred_date: at(arrive).slice(0, 10), outbound_preferred_date: at(leave).slice(0, 10),
+    outbound_origin_airport: "ICN", outbound_dest_city: name, note: i % 4 ? "비즈니스석, 직항 우선 (데모)" : "국적기 선호, 오전 도착 희망 (데모)" });
+  let inbound;
+  if (done("FLIGHT") || services.FLIGHT.status === "IN_PROGRESS") {
+    for (const [d, direction] of ["INBOUND", "OUTBOUND"].entries()) {
+      const segment = add("flight_segment", `${key}:${direction}`, { service_item_id: services.FLIGHT.id, direction,
+        flight_no: `DEMO${300 + i * 2 + d}`, dep_airport: d ? "ICN" : airport, arr_airport: d ? airport : "ICN",
+        dep_at: at(d ? leave : arrive - 6 * H), arr_at: at(d ? leave + 6 * H : arrive), cabin_class: level ? "BUSINESS" : "FIRST",
+        ticket_status: services.FLIGHT.status === "IN_PROGRESS" ? "BOOKED" : "TICKETED", is_final_arrival: !d });
+      if (!d) inbound = segment;
+    }
+  }
+  if (requested("LODGING")) add("lodging_request", key, { service_item_id: services.LODGING.id,
+    check_in_preferred_date: at(arrive).slice(0, 10), check_out_preferred_date: at(leave).slice(0, 10),
+    room_grouping_note: `${guests.length > 1 ? "VIP·동반자 1실" : "VIP 1실"}${staff ? ", 수행원 1실" : ""}` });
+  if (done("LODGING") || services.LODGING.status === "CANCEL_REQ") {
+    add("room_assignment", `${key}:guest`, { service_item_id: services.LODGING.id, hotel_name: "[DEMO] 서울컨벤션호텔",
+      room_type: ["Presidential Suite", "Executive Suite", "Deluxe King"][level], participant_ids: guests,
+      check_in_at: at(arrive + 2 * H), check_out_at: at(leave - 3 * H), confirmation_no: `DEMO-${key.replace(":", "-")}-1` });
+    if (staff) add("room_assignment", `${key}:staff`, { service_item_id: services.LODGING.id, hotel_name: "[DEMO] 서울컨벤션호텔",
+      room_type: "Deluxe Twin", participant_ids: [staff.id], check_in_at: at(arrive + 2 * H), check_out_at: at(leave - 3 * H),
+      confirmation_no: `DEMO-${key.replace(":", "-")}-2` });
+  }
+  if (requested("TRANSFER")) add("transfer_request", key, { service_item_id: services.TRANSFER.id, direction: "INBOUND",
+    from_text: "인천공항 T2", to_text: "서울컨벤션호텔", scheduled_at: at(arrive + H), participant_ids: ids,
+    ...(inbound ? { source_flight_segment_id: inbound } : {}), luggage_note: `캐리어 ${ids.length * 2}개 (데모)` });
+  if (done("TRANSFER")) add("vehicle_dispatch", key, { service_item_id: services.TRANSFER.id, from_text: "인천공항 T2",
+    to_text: "서울컨벤션호텔", depart_at: at(arrive + H), vehicle_class: level === 0 ? "VIP 리무진" : ids.length > 2 ? "VIP VAN" : "VIP 세단",
+    driver_name: `가상 기사 ${i + 1}`, participant_ids: ids });
+  if (requested("AIRPORT")) add("airport_request", key, { service_item_id: services.AIRPORT.id,
+    scope: level === 0 ? ["GREETING", "FAST_TRACK", "LOUNGE", "BAGGAGE"] : ["GREETING", "BAGGAGE"],
+    note: level === 0 ? "국빈급 의전, 귀빈실 이용 (데모)" : "입국장 영접 지원 (데모)" });
+  if (done("AIRPORT")) add("airport_assignment", key, { service_item_id: services.AIRPORT.id,
+    attendant_name: `데모 의전담당 ${String.fromCharCode(65 + (i % 26))}`, meeting_point: "인천공항 T2 입국장 A", meeting_at: at(arrive + H / 2) });
+  if (requested("DIETARY")) people.forEach((p, k) => {
+    const dietary_code = HALAL.has(country) ? "HALAL" : country === "IN" ? "VEGETARIAN" : k === 1 && i % 4 === 1 ? "ALLERGY" : i % 7 === 3 ? "VEGAN" : "NONE";
+    add("dietary_requirement", `${key}:${k}`, { service_item_id: services.DIETARY.id, participant_id: p.id, dietary_code,
+      note: dietary_code === "ALLERGY" ? "갑각류 알레르기 (가상)" : "가상 식이 요청" });
+  });
+  return { delegation_id, people, guests, staff, services };
+}
+
+function addLargeEvent(add, users, serviceIds, ctx) {
+  const { base, tenant_id } = ctx;
   const attending = [];
   COUNTRIES.forEach(([country, name, airport], i) => {
     const stage = i === 51 ? "BOUNCED" : STAGES[i % 18];
     const [invite_status, rsvp, completeness] = STAGE_INFO[stage];
     const level = i % 5 === 0 ? 0 : i % 5 < 3 ? 1 : 2;
-    const delegation_id = add("delegation", country, { ...base, name: `${name} 대표단 [DEMO]`, country,
-      organization: `${name} 데모 외교부`, invite_status, rsvp, owner_user_id: i % 2 ? users.manager : users.pco,
-      protocol_level_id: levels[level], preferred_language: i % 3 ? "en" : "ko", completeness });
     // 7과 54는 서로소라 (i*7)%54가 0~53을 한 번씩 돌아 동반자가 정확히 34명입니다.
     const types = ["VIP", ...((i * 7) % 54 < 34 ? ["COMPANION"] : []), ...(i % 3 === 0 ? ["STAFF"] : [])];
-    const status = stage === "DECL" ? "CANCELLED" : stage === "C" || stage === "CH" ? "CONFIRMED" : "REGISTERED";
-    const people = types.map((participant_type, k) => ({ participant_type, id: add("participant", `${country}:${k}`, {
-      tenant_id, delegation_id, participant_type, last_name: `Demo${country}`, first_name: { VIP: "Alex", COMPANION: "Robin", STAFF: "Sam" }[participant_type],
-      display_name: `${name} ${LABEL[participant_type]} (가상)`, nationality: country,
-      title: { VIP: ["대통령 특사", "장관", "차관"][level], COMPANION: "배우자", STAFF: "의전담당" }[participant_type],
-      sort_order: k, protocol_level_id: levels[level], status }) }));
-    const ids = people.map((p) => p.id);
-    const guests = people.filter((p) => p.participant_type !== "STAFF").map((p) => p.id);
-    const staff = people.find((p) => p.participant_type === "STAFF");
-
     const statusOf = (type) => {
       if (stage === "DECL") return "NOT_APPLICABLE";
       if (["O", "SENT", "BOUNCED"].includes(stage)) return "DRAFT";
@@ -243,58 +301,9 @@ function addLargeEvent(add, users, serviceIds, { base, tenant_id, levels, eventV
     };
     const arrive = Date.UTC(2027, 1, 28) + ((i * 7) % 36) * H; // 28 Feb 2027 09:00 ~ 1 Mar 20:00 KST
     const leave = Date.UTC(2027, 2, 4, 1) + (i % 10) * H;
-    const services = {};
-    for (const type of SERVICE_TYPES) {
-      const svc = statusOf(type);
-      services[type] = { status: svc, id: add("service_item", `${country}:${type}`, { ...base, delegation_id, service_type: type,
-        id: serviceIds[`${country}:${type}`] ?? demoId(`service_item:${country}:${type}`), event_vendor_id: eventVendors[type],
-        support_type: stage === "DECL" ? "NOT_PROVIDED" : "SUPPORTED", status: svc, note: `[DEMO] ${name} ${type} 요청`, scheduled_at: at(arrive),
-        ...(DONE.includes(svc) ? { confirmed_at: at(Date.UTC(2027, 1, 10) + i * H), confirmation_note: "데모 확정 내역" } : {}) }) };
-    }
-    const requested = (type) => !["DRAFT", "NOT_APPLICABLE"].includes(services[type].status);
-    const done = (type) => DONE.includes(services[type].status);
-
-    if (requested("FLIGHT")) add("flight_request", country, { service_item_id: services.FLIGHT.id, inbound_origin_city: name,
-      inbound_dest_airport: "ICN", inbound_preferred_date: at(arrive).slice(0, 10), outbound_preferred_date: at(leave).slice(0, 10),
-      outbound_origin_airport: "ICN", outbound_dest_city: name, note: i % 4 ? "비즈니스석, 직항 우선 (데모)" : "국적기 선호, 오전 도착 희망 (데모)" });
-    let inbound;
-    if (done("FLIGHT") || services.FLIGHT.status === "IN_PROGRESS") {
-      for (const [d, direction] of ["INBOUND", "OUTBOUND"].entries()) {
-        const segment = add("flight_segment", `${country}:${direction}`, { service_item_id: services.FLIGHT.id, direction,
-          flight_no: `DEMO${300 + i * 2 + d}`, dep_airport: d ? "ICN" : airport, arr_airport: d ? airport : "ICN",
-          dep_at: at(d ? leave : arrive - 6 * H), arr_at: at(d ? leave + 6 * H : arrive), cabin_class: level ? "BUSINESS" : "FIRST",
-          ticket_status: services.FLIGHT.status === "IN_PROGRESS" ? "BOOKED" : "TICKETED", is_final_arrival: !d });
-        if (!d) inbound = segment;
-      }
-    }
-    if (requested("LODGING")) add("lodging_request", country, { service_item_id: services.LODGING.id,
-      check_in_preferred_date: at(arrive).slice(0, 10), check_out_preferred_date: at(leave).slice(0, 10),
-      room_grouping_note: `${guests.length > 1 ? "VIP·동반자 1실" : "VIP 1실"}${staff ? ", 수행원 1실" : ""}` });
-    if (done("LODGING") || services.LODGING.status === "CANCEL_REQ") {
-      add("room_assignment", `${country}:guest`, { service_item_id: services.LODGING.id, hotel_name: "[DEMO] 서울컨벤션호텔",
-        room_type: ["Presidential Suite", "Executive Suite", "Deluxe King"][level], participant_ids: guests,
-        check_in_at: at(arrive + 2 * H), check_out_at: at(leave - 3 * H), confirmation_no: `DEMO-${country}-1` });
-      if (staff) add("room_assignment", `${country}:staff`, { service_item_id: services.LODGING.id, hotel_name: "[DEMO] 서울컨벤션호텔",
-        room_type: "Deluxe Twin", participant_ids: [staff.id], check_in_at: at(arrive + 2 * H), check_out_at: at(leave - 3 * H),
-        confirmation_no: `DEMO-${country}-2` });
-    }
-    if (requested("TRANSFER")) add("transfer_request", country, { service_item_id: services.TRANSFER.id, direction: "INBOUND",
-      from_text: "인천공항 T2", to_text: "서울컨벤션호텔", scheduled_at: at(arrive + H), participant_ids: ids,
-      ...(inbound ? { source_flight_segment_id: inbound } : {}), luggage_note: `캐리어 ${ids.length * 2}개 (데모)` });
-    if (done("TRANSFER")) add("vehicle_dispatch", country, { service_item_id: services.TRANSFER.id, from_text: "인천공항 T2",
-      to_text: "서울컨벤션호텔", depart_at: at(arrive + H), vehicle_class: level === 0 ? "VIP 리무진" : ids.length > 2 ? "VIP VAN" : "VIP 세단",
-      driver_name: `가상 기사 ${i + 1}`, participant_ids: ids });
-    if (requested("AIRPORT")) add("airport_request", country, { service_item_id: services.AIRPORT.id,
-      scope: level === 0 ? ["GREETING", "FAST_TRACK", "LOUNGE", "BAGGAGE"] : ["GREETING", "BAGGAGE"],
-      note: level === 0 ? "국빈급 의전, 귀빈실 이용 (데모)" : "입국장 영접 지원 (데모)" });
-    if (done("AIRPORT")) add("airport_assignment", country, { service_item_id: services.AIRPORT.id,
-      attendant_name: `데모 의전담당 ${String.fromCharCode(65 + (i % 26))}`, meeting_point: "인천공항 T2 입국장 A", meeting_at: at(arrive + H / 2) });
-    if (requested("DIETARY")) people.forEach((p, k) => {
-      const dietary_code = HALAL.has(country) ? "HALAL" : country === "IN" ? "VEGETARIAN" : k === 1 && i % 4 === 1 ? "ALLERGY" : i % 7 === 3 ? "VEGAN" : "NONE";
-      add("dietary_requirement", `${country}:${k}`, { service_item_id: services.DIETARY.id, participant_id: p.id, dietary_code,
-        note: dietary_code === "ALLERGY" ? "갑각류 알레르기 (가상)" : "가상 식이 요청" });
-    });
-
+    const { delegation_id, people, guests, staff, services } = addDelegation(add, users, serviceIds, ctx, { key: country, country, name, airport,
+      i, level, types, invite_status, rsvp, completeness, statusOf, arrive, leave,
+      participantStatus: stage === "DECL" ? "CANCELLED" : stage === "C" || stage === "CH" ? "CONFIRMED" : "REGISTERED" });
     if (["C", "CH", "S"].includes(stage)) {
       for (const [c, category] of ["REQUIRED", "OPTIONAL", "SENSITIVE", "UNIQUE_ID", "OVERSEAS_TRANSFER", "REUSE_STORAGE"].entries()) {
         for (const p of people) add("consent_record", `${category}:${p.id}`, { tenant_id, delegation_id, participant_id: p.id,
@@ -334,4 +343,79 @@ function addLargeEvent(add, users, serviceIds, { base, tenant_id, levels, eventV
         ...(resolved ? { resolution_note: "데모 변경 반영 완료", resolved_at: "2027-02-22T00:00:00Z", resolved_by: vendorUser(type) } : {}) });
     });
   });
+}
+
+// 준비 중 행사(2027년 6월)는 초청 발송 직후라 대부분 요청 전·요청 단계입니다.
+// 종료 행사(2026년 9월)는 모든 서비스가 끝났고 업체 정산까지 완료되어 업체 화면에서는 보이지 않습니다.
+const OTHER_EVENTS = [
+  { key: "prep", event: "preparing", countries: COUNTRIES.slice(0, 18), arriveBase: Date.UTC(2027, 5, 14), closed: false,
+    programs: [["개막식", "PLENARY", "TENTATIVE", "PUBLIC"], ["전통 공연 관람", "COMPANION", "TENTATIVE", "STAKEHOLDER"]] },
+  { key: "closed", event: "closed", countries: COUNTRIES.slice(28, 52), arriveBase: Date.UTC(2026, 8, 14), closed: true,
+    programs: [["개막 총회", "PLENARY", "DONE", "PUBLIC"], ["환영 만찬", "BANQUET", "DONE", "STAKEHOLDER"],
+      ["산업 시찰", "COMPANION", "DONE", "STAKEHOLDER"], ["폐막식", "PLENARY", "DONE", "PUBLIC"]] },
+];
+const PREP_STAGES = [["READY", null, 0], ["SENT", null, 0], ["SENT", null, 0], ["OPENED", "UNDECIDED", 10], ["IN_PROGRESS", "ATTENDING", 40], ["SUBMITTED", "ATTENDING", 70]];
+
+function addOtherEvents(add, users, serviceIds, tenant_id) {
+  for (const { key, event, countries, arriveBase, closed, programs } of OTHER_EVENTS) {
+    const base = { tenant_id, event_id: demoId(`event:${event}`) };
+    const levels = ["국빈급", "장관급", "일반 초청"].map((name, n) =>
+      add("protocol_level", `${key}:${n}`, { ...base, name, sort_order: n, defaults: { room_type: n ? "Deluxe" : "Suite" } }));
+    const eventVendors = Object.fromEntries(SERVICE_TYPES.map((type) => [type, add("event_vendor", `${key}:${type}`, {
+      ...base, vendor_id: demoId(`vendor:${type}`), service_types: [type],
+      ...(closed ? { settled_at: "2026-10-05T00:00:00Z", settlement_note: "데모 정산 완료" } : {}) })]));
+    for (const type of SERVICE_TYPES) for (const participant_type of ["VIP", "COMPANION", "STAFF"]) {
+      add("support_policy", `${key}:${type}:${participant_type}`, { ...base, service_type: type, participant_type,
+        support_type: participant_type === "STAFF" && type === "FLIGHT" ? "SELF_BOOKED" : "SUPPORTED",
+        guide_text: { ko: "데모 지원 정책: VIP·동반자 지원, 수행원 항공 자비 예약", en: "Demo support policy" } });
+    }
+    const ctx = { base, tenant_id, levels, eventVendors };
+    const delegations = countries.map(([country, name, airport], j) => {
+      const declined = closed && j % 8 === 7;
+      const [invite_status, rsvp, completeness] = closed ? (declined ? ["DECLINED", "DECLINED", 0] : ["CONFIRMED", "ATTENDING", 100])
+        : j === 7 ? ["BOUNCED", null, 0] : PREP_STAGES[j % 6];
+      const statusOf = (type) => {
+        if (declined) return "NOT_APPLICABLE";
+        if (closed) return type === "TRANSFER" && j % 6 === 2 ? "CANCELLED" : type === "AIRPORT" || type === "DIETARY" ? "NOTIFIED" : "CONFIRMED";
+        if (invite_status === "SUBMITTED") return type === "FLIGHT" && j % 4 === 1 ? "IN_PROGRESS" : "REQUESTED";
+        return invite_status === "IN_PROGRESS" && (type === "FLIGHT" || type === "LODGING") ? "REQUESTED" : "DRAFT";
+      };
+      const arrive = arriveBase + ((j * 5) % 30) * H;
+      const types = ["VIP", ...((closed ? j % 3 !== 1 : j % 2 === 0) ? ["COMPANION"] : []), ...(closed && j % 4 === 0 ? ["STAFF"] : [])];
+      return { invite_status, ...addDelegation(add, users, serviceIds, ctx, { key: `${key}:${country}`, country, name, airport, i: j,
+        level: j % 5 === 0 ? 0 : j % 5 < 3 ? 1 : 2, types, invite_status, rsvp, completeness, statusOf, arrive,
+        leave: arriveBase + 4 * 24 * H + (j % 8) * H, participantStatus: declined ? "CANCELLED" : closed ? "DEPARTED" : "REGISTERED" }) };
+    });
+
+    const attending = delegations.filter((d) => closed ? d.invite_status === "CONFIRMED" : ["IN_PROGRESS", "SUBMITTED"].includes(d.invite_status));
+    programs.forEach(([name, program_type, status, visibility], n) => {
+      const program_id = add("program", `${key}:${n}`, { ...base, name: `${name} [DEMO]`, program_type, status, visibility,
+        organizer_type: "HOST", organizer_delegation_id: null, registered_by_type: "PCO", transfer_needed: false,
+        start_at: at(arriveBase + (2 + Math.floor(n / 2)) * 24 * H + (n % 2 ? 9 : 1) * H),
+        end_at: at(arriveBase + (2 + Math.floor(n / 2)) * 24 * H + (n % 2 ? 11 : 3) * H),
+        venue: "[DEMO] 서울컨벤션센터", audience_mode: "SPECIFIC_PARTICIPANTS" });
+      for (const d of attending) {
+        const invitees = program_type === "COMPANION" ? d.guests.slice(1) : program_type === "BANQUET" ? d.guests : [d.people[0].id];
+        for (const participant_id of invitees) add("program_attendance", `${key}:${n}:${participant_id}`, {
+          tenant_id, program_id, participant_id, role: "ATTENDEE", status: closed ? "CONFIRMED" : "INVITED" });
+      }
+    });
+
+    // 종료 행사는 모두 종결된 변경 이력, 준비 중 행사는 막 접수된 변경 1건입니다.
+    const issues = closed ? [ISSUES[0], ISSUES[1], ISSUES[5]] : [["대표단 규모 확대 (1명 → 2명)", { size: 1 }, { size: 2 }, "PCO", "OPEN", "CAUTION",
+      [["LODGING", "객실 구성 변경"], ["FLIGHT", "동반자 항공 요청 추가"]]]];
+    const targets = attending.filter((d) => closed || d.invite_status === "SUBMITTED");
+    issues.forEach(([summary, before, after, sourceType, , max_urgency, affected], t) => {
+      const d = targets[t * 2];
+      const status = closed ? "CLOSED" : "OPEN";
+      const issue_id = add("change_issue", `${key}:${t}`, { ...base, delegation_id: d.delegation_id, issue_no: `DEMO-${t + 1}`,
+        source: sourceType === "PCO" ? "PCO" : "VENDOR", source_user_id: sourceType === "PCO" ? users.manager : users[DEMO_VENDOR_USERS[sourceType]],
+        origin_service_id: d.services[sourceType === "PCO" ? affected[0][0] : sourceType].id, summary, before, after, status, max_urgency,
+        ...(closed ? { closed_at: at(arriveBase - 24 * H) } : {}) });
+      affected.forEach(([type, instruction]) => add("adjustment_item", `${key}:${t}:${type}`, { issue_id, service_item_id: d.services[type].id,
+        assignee_vendor_id: demoId(`vendor:${type}`), instruction, urgency: max_urgency, status: closed ? "DONE" : "ACTION_REQUIRED",
+        due_at: at(arriveBase - 30 * 24 * H),
+        ...(closed ? { resolution_note: "데모 변경 반영 완료", resolved_at: at(arriveBase - 2 * 24 * H), resolved_by: users[DEMO_VENDOR_USERS[type]] } : {}) }));
+    });
+  }
 }

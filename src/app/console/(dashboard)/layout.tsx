@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { logOutPco } from "@/server/modules/iam/auth-actions";
+import { requirePcoMembership } from "@/server/modules/org/get-membership";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 // 행사에 속한 메뉴(대표단·변경 이슈·전체 명단·업체)는 여기 없습니다 —
@@ -37,6 +38,7 @@ const NAV = [
 ];
 
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
+  await requirePcoMembership();
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase.auth.getClaims();
 

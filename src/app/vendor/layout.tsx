@@ -10,7 +10,7 @@ import { Briefcase } from "lucide-react";
 import { LiveRefresh } from "@/components/shared/live-refresh";
 
 const NAV = [
-  { href: "/vendor", label: "통합 할 일" },
+  { href: "/vendor", label: "할 일" },
   { href: "/vendor/history", label: "처리 내역" },
   { href: "/vendor/account", label: "내 정보" },
 ];

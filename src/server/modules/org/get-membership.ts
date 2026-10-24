@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 
 export interface Membership {
@@ -30,4 +31,20 @@ export async function getCurrentMembership(): Promise<Membership | null> {
     tenantName: tenant?.name ?? "",
     role: data.role as Membership["role"],
   };
+}
+
+// PCO 콘솔은 PCO 소속만 씁니다. 업체·대리인 계정은 자기 화면으로, 로그인 전이면 로그인 화면으로 보냅니다.
+export async function requirePcoMembership(): Promise<Membership> {
+  const membership = await getCurrentMembership();
+  if (membership) return membership;
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/console-login");
+  const [vendor, proxy] = await Promise.all([
+    supabase.from("vendor_member").select("vendor_id").eq("user_id", user.id).eq("status", "ACTIVE").limit(1),
+    supabase.from("delegation_proxy").select("delegation_id").eq("user_id", user.id).eq("status", "ACTIVE").limit(1),
+  ]);
+  redirect(vendor.data?.length ? "/vendor" : proxy.data?.length ? "/portal" : "/console-login");
 }

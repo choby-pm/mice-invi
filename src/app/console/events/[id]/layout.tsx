@@ -24,7 +24,7 @@ import { logOutPco } from "@/server/modules/iam/auth-actions";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { StatusBadge, type StatusBadgeStatus } from "@/components/shared/status-badge";
 import { LiveRefresh } from "@/components/shared/live-refresh";
-import { getCurrentMembership } from "@/server/modules/org/get-membership";
+import { requirePcoMembership } from "@/server/modules/org/get-membership";
 
 const STATUS_LABEL: Record<string, string> = { PREPARING: "준비 중", ACTIVE: "진행 중", CLOSED: "종료" };
 const STATUS_BADGE: Record<string, StatusBadgeStatus> = { PREPARING: "wait", ACTIVE: "progress", CLOSED: "done" };
@@ -37,8 +37,7 @@ export default async function EventLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const membership = await getCurrentMembership();
-  if (!membership) notFound();
+  const membership = await requirePcoMembership();
   const supabase = await createServerSupabaseClient();
   const [{ data: event }, { data: auth }, { count: openIssueCount }] = await Promise.all([
     supabase.from("event").select("id, name, status").eq("id", id).eq("tenant_id", membership.tenantId).single(),

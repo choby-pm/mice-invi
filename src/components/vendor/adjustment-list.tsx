@@ -87,12 +87,9 @@ export function AdjustmentList({ items }: { items: VendorAdjustmentRow[] }) {
   if (items.length === 0) return null;
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-medium text-muted-foreground">변경으로 인한 조정 요청</h2>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <AdjustmentCard key={item.id} item={item} />
-        ))}
-      </div>
+      {items.map((item) => (
+        <AdjustmentCard key={item.id} item={item} />
+      ))}
     </div>
   );
 }
